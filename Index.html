@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web File Sharing</title>
+</head>
+<body>
+    <h2>Unggah File Anda</h2>
+    <input type="file" id="fileInput" />
+    <button onclick="unggahFile()">Unggah</button>
+    
+    <p id="status"></p>
+
+    <script>
+        async function unggahFile() {
+            const input = document.getElementById('fileInput');
+            const statusText = document.getElementById('status');
+            
+            if (input.files.length === 0) {
+                statusText.innerText = "Pilih file terlebih dahulu!";
+                return;
+            }
+
+            const file = input.files[0];
+            statusText.innerText = "Mengunggah...";
+
+            try {
+                // Mengirim file ke API (Pages Functions) yang akan kita buat
+                const response = await fetch(`/api/upload?filename=${file.name}`, {
+                    method: 'PUT',
+                    body: file,
+                });
+
+                if (response.ok) {
+                    statusText.innerText = `Sukses! File berhasil diunggah.`;
+                } else {
+                    statusText.innerText = "Gagal mengunggah file.";
+                }
+            } catch (error) {
+                statusText.innerText = "Terjadi kesalahan jaringan.";
+            }
+        }
+    </script>
+</body>
+</html>
