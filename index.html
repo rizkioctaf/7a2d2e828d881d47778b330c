@@ -21,6 +21,23 @@
             margin-bottom: 20px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
         }
+        
+        /* Gaya untuk Kolom Pencarian */
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #0051c3;
+            box-shadow: 0 0 5px rgba(0, 81, 195, 0.3);
+        }
+
         .file-item { 
             display: flex; 
             justify-content: space-between; 
@@ -62,6 +79,32 @@
         .delete-btn:hover { background: #c82333; }
         
         #statusMsg { margin-top: 10px; font-size: 0.9em; }
+
+        /* Gaya untuk Toast Notification (Notifikasi Mengambang) */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px 20px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s, visibility 0.3s;
+        }
+        /* Class yang ditambahkan saat notifikasi muncul */
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
     </style>
 </head>
 <body>
@@ -80,53 +123,66 @@
 
     <div class="card">
         <h3>Daftar File</h3>
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Cari nama file...">
         <div id="fileList">Memuat data...</div>
     </div>
 
+    <!-- Elemen Toast Notification -->
+    <div id="toast">✅ Link berhasil disalin!</div>
+
     <script>
-        // Fungsi untuk mengambil dan menampilkan file
+        let allFiles = [];
+
         async function loadFiles() {
             try {
                 const res = await fetch('/api/list');
-                const files = await res.json();
-                const listDiv = document.getElementById('fileList');
-                
-                if (!files || files.length === 0) {
-                    listDiv.innerHTML = '<p style="color: #888;">Belum ada file yang diunggah.</p>';
-                    return;
-                }
-
-                listDiv.innerHTML = files.map(file => {
-                    const fileUrl = `${window.location.origin}/api/view?key=${encodeURIComponent(file.key)}`;
-                    
-                    // Deteksi Ikon berdasarkan ekstensi file
-                    let icon = '📄';
-                    if (file.key.match(/\.(mp4|webm|mkv|mov)$/i)) icon = '🎥';
-                    else if (file.key.match(/\.(mp3|wav|ogg|m4a)$/i)) icon = '🎵';
-                    else if (file.key.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) icon = '🖼️';
-                    else if (file.key.match(/\.(pdf)$/i)) icon = '📕';
-                    else if (file.key.match(/\.(zip|rar|7z)$/i)) icon = '📦';
-
-                    return `
-                    <div class="file-item">
-                        <div class="file-info">
-                            ${icon} <strong>${file.key}</strong> 
-                            <small style="color: #666;">${(file.size / 1024).toFixed(1)} KB</small>
-                        </div>
-                        <div class="action-group">
-                            <a href="${fileUrl}" target="_blank" class="btn-link view-btn">Lihat</a>
-                            <button class="copy-btn" onclick="copyLink('${fileUrl}')">Salin Link</button>
-                            <button class="delete-btn" onclick="deleteFile('${file.key}')">Hapus</button>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
+                allFiles = await res.json();
+                renderFiles(allFiles);
             } catch (error) {
                 document.getElementById('fileList').innerHTML = '<p style="color: red;">Gagal memuat daftar file.</p>';
             }
         }
 
-        // Fungsi Upload File
+        function renderFiles(filesToShow) {
+            const listDiv = document.getElementById('fileList');
+            
+            if (!filesToShow || filesToShow.length === 0) {
+                listDiv.innerHTML = '<p style="color: #888;">File tidak ditemukan.</p>';
+                return;
+            }
+
+            listDiv.innerHTML = filesToShow.map(file => {
+                const fileUrl = `${window.location.origin}/api/view?key=${encodeURIComponent(file.key)}`;
+                
+                let icon = '📄';
+                if (file.key.match(/\.(mp4|webm|mkv|mov)$/i)) icon = '🎥';
+                else if (file.key.match(/\.(mp3|wav|ogg|m4a)$/i)) icon = '🎵';
+                else if (file.key.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) icon = '🖼️';
+                else if (file.key.match(/\.(pdf)$/i)) icon = '📕';
+                else if (file.key.match(/\.(zip|rar|7z)$/i)) icon = '📦';
+
+                return `
+                <div class="file-item">
+                    <div class="file-info">
+                        ${icon} <strong>${file.key}</strong> 
+                        <small style="color: #666;">${(file.size / 1024).toFixed(1)} KB</small>
+                    </div>
+                    <div class="action-group">
+                        <a href="${fileUrl}" target="_blank" class="btn-link view-btn">Lihat</a>
+                        <button class="copy-btn" onclick="copyLink('${fileUrl}')">Salin Link</button>
+                        <button class="delete-btn" onclick="deleteFile('${file.key}')">Hapus</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const keyword = e.target.value.toLowerCase();
+            const filteredFiles = allFiles.filter(file => file.key.toLowerCase().includes(keyword));
+            renderFiles(filteredFiles);
+        });
+
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const fileInput = document.getElementById('fileInput');
@@ -145,6 +201,7 @@
                     statusMsg.innerText = "✅ File berhasil diunggah!";
                     statusMsg.style.color = "green";
                     fileInput.value = ''; 
+                    document.getElementById('searchInput').value = ''; 
                     loadFiles(); 
                 } else throw new Error('Gagal upload');
             } catch (error) {
@@ -153,11 +210,11 @@
             }
         });
 
-        // Fungsi Hapus File
         async function deleteFile(key) {
             if(confirm(`Yakin ingin menghapus file "${key}"?`)) {
                 try {
                     await fetch(`/api/delete?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+                    document.getElementById('searchInput').value = ''; 
                     loadFiles(); 
                 } catch (error) {
                     alert("Gagal menghapus file.");
@@ -165,16 +222,27 @@
             }
         }
 
-        // Fungsi Salin Link
+        // Fungsi Menampilkan Toast Notification
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.classList.add("show");
+            
+            // Hilangkan class 'show' setelah 3 detik (3000 milidetik)
+            setTimeout(function() {
+                toast.classList.remove("show");
+            }, 3000);
+        }
+
+        // Fungsi Salin Link yang sudah diperbarui
         function copyLink(url) {
             navigator.clipboard.writeText(url).then(() => {
-                alert("✅ Link berhasil disalin!");
+                showToast("✅ Link berhasil disalin!");
             }).catch(() => {
-                alert("❌ Gagal menyalin link.");
+                showToast("❌ Gagal menyalin link.");
             });
         }
 
-        // Jalankan saat halaman dimuat
         loadFiles();
     </script>
 </body>
