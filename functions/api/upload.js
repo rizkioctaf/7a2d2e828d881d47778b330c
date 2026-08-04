@@ -5,7 +5,7 @@ export async function onRequestPost(context) {
   
   if (!file) return new Response('Tidak ada file', { status: 400 });
   
-  // Menyimpan file beserta informasi tipe file-nya (agar bisa di-view di browser)
+  // Menyimpan file beserta informasi tipe file-nya agar bisa di-view browser
   await context.env.MY_BUCKET.put(file.name, file.stream(), {
       httpMetadata: { contentType: file.type }
   });

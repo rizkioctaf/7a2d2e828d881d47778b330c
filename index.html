@@ -7,15 +7,12 @@
     <style>
         body { 
             font-family: sans-serif; 
-            max-width: 650px; 
+            max-width: 700px; 
             margin: 40px auto; 
             padding: 20px; 
             background-color: #f9f9f9; 
         }
-        h2 { 
-            text-align: center; 
-            color: #333; 
-        }
+        h2 { text-align: center; color: #333; }
         .card { 
             background: white; 
             border: 1px solid #ddd; 
@@ -31,9 +28,7 @@
             padding: 12px 10px; 
             border-bottom: 1px solid #eee; 
         }
-        .file-item:last-child { 
-            border-bottom: none; 
-        }
+        .file-item:last-child { border-bottom: none; }
         .file-info { 
             flex-grow: 1; 
             overflow: hidden; 
@@ -47,29 +42,14 @@
         }
         
         /* Tombol Aksi */
-        .action-group { 
-            display: flex; 
-            gap: 8px; 
-            flex-shrink: 0;
-        }
+        .action-group { display: flex; gap: 8px; flex-shrink: 0; }
         button, .btn-link { 
-            padding: 6px 10px; 
-            cursor: pointer; 
-            border-radius: 4px; 
-            font-weight: bold; 
-            border: none; 
-            text-decoration: none; 
-            font-size: 0.85em; 
-            text-align: center; 
+            padding: 6px 10px; cursor: pointer; border-radius: 4px; 
+            font-weight: bold; border: none; text-decoration: none; 
+            font-size: 0.85em; text-align: center; 
         }
         
-        .upload-btn { 
-            background: #0051c3; 
-            color: white; 
-            padding: 10px 15px; 
-            margin-top: 10px; 
-            font-size: 1em; 
-        }
+        .upload-btn { background: #0051c3; color: white; padding: 10px 15px; margin-top: 10px; font-size: 1em; }
         .upload-btn:hover { background: #003d93; }
         
         .view-btn { background: #28a745; color: white; }
@@ -81,10 +61,7 @@
         .delete-btn { background: #dc3545; color: white; }
         .delete-btn:hover { background: #c82333; }
         
-        #statusMsg { 
-            margin-top: 10px; 
-            font-size: 0.9em; 
-        }
+        #statusMsg { margin-top: 10px; font-size: 0.9em; }
     </style>
 </head>
 <body>
@@ -120,13 +97,20 @@
                 }
 
                 listDiv.innerHTML = files.map(file => {
-                    // Membuat URL untuk melihat file
                     const fileUrl = `${window.location.origin}/api/view?key=${encodeURIComponent(file.key)}`;
                     
+                    // Deteksi Ikon berdasarkan ekstensi file
+                    let icon = '📄';
+                    if (file.key.match(/\.(mp4|webm|mkv|mov)$/i)) icon = '🎥';
+                    else if (file.key.match(/\.(mp3|wav|ogg|m4a)$/i)) icon = '🎵';
+                    else if (file.key.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) icon = '🖼️';
+                    else if (file.key.match(/\.(pdf)$/i)) icon = '📕';
+                    else if (file.key.match(/\.(zip|rar|7z)$/i)) icon = '📦';
+
                     return `
                     <div class="file-item">
                         <div class="file-info">
-                            📄 <strong>${file.key}</strong> 
+                            ${icon} <strong>${file.key}</strong> 
                             <small style="color: #666;">${(file.size / 1024).toFixed(1)} KB</small>
                         </div>
                         <div class="action-group">

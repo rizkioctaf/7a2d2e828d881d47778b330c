@@ -4,7 +4,6 @@ export async function onRequestGet(context) {
   
   if (!key) return new Response('Tidak ada nama file', { status: 400 });
   
-  // Mengambil file dari R2
   const object = await context.env.MY_BUCKET.get(key);
   
   if (object === null) {
@@ -12,10 +11,10 @@ export async function onRequestGet(context) {
   }
 
   const headers = new Headers();
-  object.writeHttpMetadata(headers); // Menyertakan tipe file (misal: image/png)
+  object.writeHttpMetadata(headers); 
   headers.set('etag', object.httpEtag);
   
-  // Mengizinkan website lain untuk menampilkan file ini (CORS)
+  // Mengizinkan website lain untuk mengakses file ini
   headers.set('Access-Control-Allow-Origin', '*');
 
   return new Response(object.body, { headers });
