@@ -69,17 +69,29 @@
             transition: border-color 0.3s; 
         }
         .search-box:focus { outline: none; border-color: #0051c3; box-shadow: 0 0 0 3px rgba(0, 81, 195, 0.1); }
+        
+        /* GAYA DAFTAR FILE NORMAL */
         .file-item { 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
             padding: 15px; 
             border-bottom: 1px solid #f0f0f0; 
+            border-left: 4px solid transparent; /* default */
             transition: background 0.2s; 
         }
         .file-item:hover { background-color: #fafbfc; }
         .file-item:last-child { border-bottom: none; }
         
+        /* GAYA SPESIAL UNTUK FILE SEMENTARA (HIGHLIGHT) */
+        .file-item.temp-item {
+            background-color: #fffdf5; /* Background kuning sangat muda */
+            border-left: 4px solid #ffc107; /* Garis kuning di sebelah kiri */
+        }
+        .file-item.temp-item:hover {
+            background-color: #fff9e6;
+        }
+
         .file-info { flex-grow: 1; overflow: hidden; margin-right: 15px; }
         .file-info strong { 
             display: flex; 
@@ -93,14 +105,14 @@
         
         /* Lencana File Sementara */
         .badge-temp { 
-            background-color: #fff3cd; 
+            background-color: #ffeeba; 
             color: #856404; 
             font-size: 0.7em; 
             padding: 3px 8px; 
             border-radius: 12px; 
             margin-left: 10px; 
             font-weight: bold; 
-            border: 1px solid #ffeeba; 
+            border: 1px solid #ffdf7e; 
         }
 
         /* === TOMBOL AKSI === */
@@ -171,7 +183,6 @@
                 <input type="file" id="fileInput" required>
             </div>
             
-            <!-- Tambahan Kotak Centang File Sementara -->
             <label class="checkbox-group">
                 <input type="checkbox" id="tempCheck">
                 Jadikan file sementara (Otomatis terhapus dalam 30 Hari)
@@ -226,12 +237,12 @@
             e.preventDefault();
             const statusMsg = document.getElementById('statusMsg');
             const uploadBtn = document.getElementById('uploadBtn');
-            const isTemp = document.getElementById('tempCheck').checked; // Ambil nilai centang
+            const isTemp = document.getElementById('tempCheck').checked;
             
             if (fileInput.files.length === 0) return;
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            formData.append('isTemp', isTemp); // Kirim data sementara ke API
+            formData.append('isTemp', isTemp);
 
             statusMsg.innerText = "⏳ Mengunggah file...";
             statusMsg.style.color = "#0051c3";
@@ -243,10 +254,9 @@
                     statusMsg.innerText = "✅ File berhasil diunggah!";
                     statusMsg.style.color = "green";
                     
-                    // Reset semuanya
                     fileInput.value = ''; 
                     updateDropText();
-                    document.getElementById('tempCheck').checked = false; // Reset centang
+                    document.getElementById('tempCheck').checked = false; 
                     document.getElementById('searchInput').value = ''; 
                     
                     loadFiles(); 
@@ -280,11 +290,15 @@
             listDiv.innerHTML = filesToShow.map(file => {
                 const fileUrl = `${window.location.origin}/api/view?key=${encodeURIComponent(file.key)}`;
                 
-                // Cek apakah file berada di folder temp/
+                // Deteksi file sementara
                 const isTempFile = file.key.startsWith('temp/');
-                // Jika iya, sembunyikan tulisan temp/ agar nama file lebih rapi dibaca user
                 const displayName = isTempFile ? file.key.substring(5) : file.key;
-                const badge = isTempFile ? `<span class="badge-temp">⏳ 30 Hari</span>` : '';
+                
+                // --- PENANDA BARU DI SINI ---
+                // Tambahkan class CSS khusus 'temp-item' agar row tersorot warna kuning
+                const tempClass = isTempFile ? 'temp-item' : '';
+                // Lencana khusus
+                const badge = isTempFile ? `<span class="badge-temp">⏳ Terhapus dlm 30 Hari</span>` : '';
 
                 let icon = '📄';
                 if (displayName.match(/\.(mp4|webm|mkv|mov)$/i)) icon = '🎥';
@@ -294,7 +308,7 @@
                 else if (displayName.match(/\.(zip|rar|7z)$/i)) icon = '📦';
 
                 return `
-                <div class="file-item">
+                <div class="file-item ${tempClass}">
                     <div class="file-info">
                         <strong>${icon} &nbsp;${displayName} ${badge}</strong> 
                         <small>${(file.size / 1024).toFixed(1)} KB</small>
@@ -311,7 +325,6 @@
 
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const keyword = e.target.value.toLowerCase();
-            // Pencarian juga mengabaikan teks "temp/"
             const filteredFiles = allFiles.filter(file => {
                 const searchName = file.key.startsWith('temp/') ? file.key.substring(5) : file.key;
                 return searchName.toLowerCase().includes(keyword);
