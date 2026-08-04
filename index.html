@@ -5,105 +5,124 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mini Dropbox Cloudflare</title>
     <style>
+        /* === GAYA DASAR === */
         body { 
-            font-family: sans-serif; 
-            max-width: 700px; 
-            margin: 40px auto; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 750px; 
+            margin: 0 auto; 
             padding: 20px; 
-            background-color: #f9f9f9; 
+            background-color: #f0f4f8; 
+            color: #333;
         }
-        h2 { text-align: center; color: #333; }
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 30px; }
+        
         .card { 
             background: white; 
-            border: 1px solid #ddd; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            border: none; 
+            padding: 25px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
         }
         
-        /* Gaya untuk Kolom Pencarian */
-        .search-box {
-            width: 100%;
-            padding: 12px;
+        /* === AREA DRAG & DROP === */
+        .drop-zone {
+            border: 2px dashed #0051c3;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #f9fbff;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.3s ease;
             margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1em;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            background-color: #e2edff;
+            border-color: #003d93;
+            color: #003d93;
+        }
+        .drop-zone p { margin: 0; font-size: 1.1em; pointer-events: none; }
+        .drop-zone span { font-size: 2em; display: block; margin-bottom: 10px; pointer-events: none; }
+        
+        /* Sembunyikan input file bawaan yang jelek */
+        #fileInput { display: none; }
+
+        /* === PENCARIAN & LIST FILE === */
+        .search-box {
+            width: 100%; padding: 12px 15px; margin-bottom: 20px; 
+            border: 1px solid #ddd; border-radius: 8px; 
+            box-sizing: border-box; font-size: 1em;
+            transition: border-color 0.3s;
         }
         .search-box:focus {
-            outline: none;
-            border-color: #0051c3;
-            box-shadow: 0 0 5px rgba(0, 81, 195, 0.3);
+            outline: none; border-color: #0051c3; box-shadow: 0 0 0 3px rgba(0, 81, 195, 0.1);
         }
 
         .file-item { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 12px 10px; 
-            border-bottom: 1px solid #eee; 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px; border-bottom: 1px solid #f0f0f0; 
+            transition: background 0.2s;
         }
+        .file-item:hover { background-color: #fafbfc; }
         .file-item:last-child { border-bottom: none; }
-        .file-info { 
-            flex-grow: 1; 
-            overflow: hidden; 
-            margin-right: 15px;
-        }
-        .file-info strong { 
-            display: block; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-        }
         
-        /* Tombol Aksi */
+        .file-info { flex-grow: 1; overflow: hidden; margin-right: 15px; }
+        .file-info strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1.05em; }
+        .file-info small { color: #888; margin-top: 4px; display: block; }
+        
+        /* === TOMBOL AKSI === */
         .action-group { display: flex; gap: 8px; flex-shrink: 0; }
         button, .btn-link { 
-            padding: 6px 10px; cursor: pointer; border-radius: 4px; 
-            font-weight: bold; border: none; text-decoration: none; 
-            font-size: 0.85em; text-align: center; 
+            padding: 8px 12px; cursor: pointer; border-radius: 6px; 
+            font-weight: 600; border: none; text-decoration: none; 
+            font-size: 0.85em; text-align: center; transition: background 0.2s;
         }
         
-        .upload-btn { background: #0051c3; color: white; padding: 10px 15px; margin-top: 10px; font-size: 1em; }
+        .upload-btn { background: #0051c3; color: white; padding: 12px 20px; font-size: 1em; width: 100%; border-radius: 8px; }
         .upload-btn:hover { background: #003d93; }
+        .upload-btn:disabled { background: #ccc; cursor: not-allowed; }
         
-        .view-btn { background: #28a745; color: white; }
-        .view-btn:hover { background: #218838; }
+        .view-btn { background: #e6f4ea; color: #1e8e3e; }
+        .view-btn:hover { background: #ceead6; }
         
-        .copy-btn { background: #ffc107; color: black; }
-        .copy-btn:hover { background: #e0a800; }
+        .copy-btn { background: #fef7e0; color: #b08d00; }
+        .copy-btn:hover { background: #fce8a4; }
         
-        .delete-btn { background: #dc3545; color: white; }
-        .delete-btn:hover { background: #c82333; }
+        .delete-btn { background: #fce8e6; color: #d93025; }
+        .delete-btn:hover { background: #fad2cf; }
         
-        #statusMsg { margin-top: 10px; font-size: 0.9em; }
+        #statusMsg { margin-top: 15px; font-size: 0.95em; text-align: center; font-weight: 500; }
 
-        /* Gaya untuk Toast Notification (Notifikasi Mengambang) */
+        /* === TOAST NOTIFICATION === */
         #toast {
-            visibility: hidden;
-            min-width: 250px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 8px;
-            padding: 12px 20px;
-            position: fixed;
-            z-index: 1000;
-            left: 50%;
-            bottom: 30px;
-            transform: translateX(-50%);
-            font-size: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            opacity: 0;
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 8px; padding: 12px 20px; position: fixed;
+            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0;
             transition: opacity 0.3s, bottom 0.3s, visibility 0.3s;
         }
-        /* Class yang ditambahkan saat notifikasi muncul */
-        #toast.show {
-            visibility: visible;
-            opacity: 1;
-            bottom: 50px;
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+
+        /* === RESPONSIVE UNTUK MOBILE (HP) === */
+        @media (max-width: 600px) {
+            .file-item {
+                flex-direction: column; /* Mengubah susunan ke bawah di layar kecil */
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .action-group {
+                width: 100%;
+                justify-content: space-between; /* Menyebar tombol rata kiri-kanan */
+            }
+            button, .btn-link {
+                flex: 1; /* Membuat tombol berukuran sama besar */
+                padding: 10px 5px;
+            }
+            .file-info {
+                width: 100%;
+                margin-right: 0;
+            }
         }
     </style>
 </head>
@@ -114,25 +133,120 @@
     <div class="card">
         <h3>Upload File Baru</h3>
         <form id="uploadForm">
-            <input type="file" id="fileInput" required>
-            <br>
-            <button type="submit" class="upload-btn">Upload File</button>
+            
+            <!-- Area Drag & Drop -->
+            <div id="dropZone" class="drop-zone">
+                <span>📁</span>
+                <p id="dropText">Seret & jatuhkan file di sini, atau klik untuk memilih</p>
+                <!-- Input file asli disembunyikan -->
+                <input type="file" id="fileInput" required>
+            </div>
+            
+            <button type="submit" id="uploadBtn" class="upload-btn">Upload File</button>
         </form>
         <p id="statusMsg"></p>
     </div>
 
     <div class="card">
         <h3>Daftar File</h3>
-        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Cari nama file...">
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Cari file...">
         <div id="fileList">Memuat data...</div>
     </div>
 
-    <!-- Elemen Toast Notification -->
     <div id="toast">✅ Link berhasil disalin!</div>
 
     <script>
         let allFiles = [];
 
+        // ----------------------------------------------------
+        // LOGIKA DRAG AND DROP
+        // ----------------------------------------------------
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const dropText = document.getElementById('dropText');
+
+        // Jika area diklik, buka dialog file
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Saat file diseret ke atas area
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        // Saat file meninggalkan area
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        // Saat file dilepaskan di area
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                updateDropText();
+            }
+        });
+
+        // Saat file dipilih melalui klik (dialog)
+        fileInput.addEventListener('change', updateDropText);
+
+        function updateDropText() {
+            if (fileInput.files.length > 0) {
+                dropText.innerHTML = `File terpilih:<br><strong>${fileInput.files[0].name}</strong>`;
+                dropZone.style.backgroundColor = "#e2edff";
+                dropZone.style.borderColor = "#0051c3";
+            } else {
+                dropText.innerText = "Seret & jatuhkan file di sini, atau klik untuk memilih";
+                dropZone.style.backgroundColor = "";
+                dropZone.style.borderColor = "";
+            }
+        }
+
+        // ----------------------------------------------------
+        // LOGIKA UPLOAD
+        // ----------------------------------------------------
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusMsg = document.getElementById('statusMsg');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            if (fileInput.files.length === 0) return;
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            statusMsg.innerText = "⏳ Mengunggah file...";
+            statusMsg.style.color = "#0051c3";
+            uploadBtn.disabled = true;
+            uploadBtn.innerText = "Mengunggah...";
+            
+            try {
+                const response = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (response.ok) {
+                    statusMsg.innerText = "✅ File berhasil diunggah!";
+                    statusMsg.style.color = "green";
+                    
+                    // Reset form & Dropzone
+                    fileInput.value = ''; 
+                    updateDropText();
+                    document.getElementById('searchInput').value = ''; 
+                    
+                    loadFiles(); 
+                } else throw new Error('Gagal upload');
+            } catch (error) {
+                statusMsg.innerText = "❌ Terjadi kesalahan saat mengunggah.";
+                statusMsg.style.color = "red";
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerText = "Upload File";
+            }
+        });
+
+        // ----------------------------------------------------
+        // LOGIKA MENAMPILKAN, MENCARI, MENGHAPUS, MENYALIN FILE
+        // ----------------------------------------------------
         async function loadFiles() {
             try {
                 const res = await fetch('/api/list');
@@ -164,8 +278,8 @@
                 return `
                 <div class="file-item">
                     <div class="file-info">
-                        ${icon} <strong>${file.key}</strong> 
-                        <small style="color: #666;">${(file.size / 1024).toFixed(1)} KB</small>
+                        <strong>${icon} ${file.key}</strong> 
+                        <small>${(file.size / 1024).toFixed(1)} KB</small>
                     </div>
                     <div class="action-group">
                         <a href="${fileUrl}" target="_blank" class="btn-link view-btn">Lihat</a>
@@ -183,33 +297,6 @@
             renderFiles(filteredFiles);
         });
 
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fileInput = document.getElementById('fileInput');
-            const statusMsg = document.getElementById('statusMsg');
-            
-            if (fileInput.files.length === 0) return;
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            statusMsg.innerText = "⏳ Mengunggah file...";
-            statusMsg.style.color = "#666";
-            
-            try {
-                const response = await fetch('/api/upload', { method: 'POST', body: formData });
-                if (response.ok) {
-                    statusMsg.innerText = "✅ File berhasil diunggah!";
-                    statusMsg.style.color = "green";
-                    fileInput.value = ''; 
-                    document.getElementById('searchInput').value = ''; 
-                    loadFiles(); 
-                } else throw new Error('Gagal upload');
-            } catch (error) {
-                statusMsg.innerText = "❌ Terjadi kesalahan saat mengunggah.";
-                statusMsg.style.color = "red";
-            }
-        });
-
         async function deleteFile(key) {
             if(confirm(`Yakin ingin menghapus file "${key}"?`)) {
                 try {
@@ -222,19 +309,13 @@
             }
         }
 
-        // Fungsi Menampilkan Toast Notification
         function showToast(message) {
             const toast = document.getElementById("toast");
             toast.innerText = message;
             toast.classList.add("show");
-            
-            // Hilangkan class 'show' setelah 3 detik (3000 milidetik)
-            setTimeout(function() {
-                toast.classList.remove("show");
-            }, 3000);
+            setTimeout(() => { toast.classList.remove("show"); }, 3000);
         }
 
-        // Fungsi Salin Link yang sudah diperbarui
         function copyLink(url) {
             navigator.clipboard.writeText(url).then(() => {
                 showToast("✅ Link berhasil disalin!");
@@ -243,6 +324,7 @@
             });
         }
 
+        // Jalankan saat halaman dimuat
         loadFiles();
     </script>
 </body>
