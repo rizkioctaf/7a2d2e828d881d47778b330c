@@ -74,10 +74,10 @@
         .file-item { 
             display: flex; 
             justify-content: space-between; 
-            align-items: center; 
+            align-items: flex-start; /* Ubah agar saat nama file panjang, tombol tetap di posisi yang pas */
             padding: 15px; 
             border-bottom: 1px solid #f0f0f0; 
-            border-left: 4px solid transparent; /* default */
+            border-left: 4px solid transparent; 
             transition: background 0.2s; 
         }
         .file-item:hover { background-color: #fafbfc; }
@@ -85,23 +85,34 @@
         
         /* GAYA SPESIAL UNTUK FILE SEMENTARA (HIGHLIGHT) */
         .file-item.temp-item {
-            background-color: #fffdf5; /* Background kuning sangat muda */
-            border-left: 4px solid #ffc107; /* Garis kuning di sebelah kiri */
+            background-color: #fffdf5; 
+            border-left: 4px solid #ffc107; 
         }
         .file-item.temp-item:hover {
             background-color: #fff9e6;
         }
 
-        .file-info { flex-grow: 1; overflow: hidden; margin-right: 15px; }
+        /* GAYA INFO FILE (NAMA FILE PANJANG WRAP) */
+        .file-info { 
+            flex-grow: 1; 
+            margin-right: 15px; 
+            min-width: 0; /* Penting untuk mencegah flexbox meluber */
+        }
         .file-info strong { 
             display: flex; 
-            align-items: center; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
+            align-items: flex-start; /* Sejajarkan ikon di atas jika teks panjang */
+            flex-wrap: wrap; /* Mengizinkan elemen turun ke bawah jika penuh */
+            gap: 8px; /* Jarak antar ikon, teks, dan lencana */
             font-size: 1.05em; 
+            line-height: 1.4;
         }
-        .file-info small { color: #888; margin-top: 4px; display: block; }
+        /* Mencegah icon mengecil dan memastikan nama file memotong baris */
+        .file-icon { flex-shrink: 0; margin-top: 2px; }
+        .file-name-text { 
+            flex-grow: 1; 
+            word-break: break-word; /* Fitur Utama: Membuat teks panjang turun ke bawah */
+        }
+        .file-info small { color: #888; margin-top: 6px; display: block; }
         
         /* Lencana File Sementara */
         .badge-temp { 
@@ -110,13 +121,15 @@
             font-size: 0.7em; 
             padding: 3px 8px; 
             border-radius: 12px; 
-            margin-left: 10px; 
             font-weight: bold; 
             border: 1px solid #ffdf7e; 
+            white-space: nowrap; /* Jangan biarkan teks lencana patah-patah */
+            flex-shrink: 0; /* Lencana tidak akan menyusut */
+            align-self: center; /* Posisi lencana rata tengah */
         }
 
         /* === TOMBOL AKSI === */
-        .action-group { display: flex; gap: 8px; flex-shrink: 0; }
+        .action-group { display: flex; gap: 8px; flex-shrink: 0; margin-top: 5px; }
         button, .btn-link { 
             padding: 8px 12px; 
             cursor: pointer; 
@@ -141,21 +154,10 @@
 
         /* === TOAST NOTIFICATION === */
         #toast { 
-            visibility: hidden; 
-            min-width: 250px; 
-            background-color: #333; 
-            color: #fff; 
-            text-align: center; 
-            border-radius: 8px; 
-            padding: 12px 20px; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 50%; 
-            bottom: 30px; 
-            transform: translateX(-50%); 
-            font-size: 15px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-            opacity: 0; 
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; 
+            text-align: center; border-radius: 8px; padding: 12px 20px; position: fixed; 
+            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); 
+            font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; 
             transition: opacity 0.3s, bottom 0.3s, visibility 0.3s; 
         }
         #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
@@ -163,7 +165,7 @@
         /* === RESPONSIVE UNTUK MOBILE (HP) === */
         @media (max-width: 600px) {
             .file-item { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .action-group { width: 100%; justify-content: space-between; }
+            .action-group { width: 100%; justify-content: space-between; margin-top: 0; }
             button, .btn-link { flex: 1; padding: 10px 5px; }
             .file-info { width: 100%; margin-right: 0; }
         }
@@ -211,7 +213,7 @@
 
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'); });
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
@@ -294,10 +296,7 @@
                 const isTempFile = file.key.startsWith('temp/');
                 const displayName = isTempFile ? file.key.substring(5) : file.key;
                 
-                // --- PENANDA BARU DI SINI ---
-                // Tambahkan class CSS khusus 'temp-item' agar row tersorot warna kuning
                 const tempClass = isTempFile ? 'temp-item' : '';
-                // Lencana khusus
                 const badge = isTempFile ? `<span class="badge-temp">⏳ Terhapus dlm 30 Hari</span>` : '';
 
                 let icon = '📄';
@@ -310,7 +309,12 @@
                 return `
                 <div class="file-item ${tempClass}">
                     <div class="file-info">
-                        <strong>${icon} &nbsp;${displayName} ${badge}</strong> 
+                        <!-- Struktur baru agar nama file bisa Wrap/Turun tanpa merusak icon dan badge -->
+                        <strong>
+                            <span class="file-icon">${icon}</span> 
+                            <span class="file-name-text">${displayName}</span> 
+                            ${badge}
+                        </strong> 
                         <small>${(file.size / 1024).toFixed(1)} KB</small>
                     </div>
                     <div class="action-group">
