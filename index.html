@@ -3,44 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web File Sharing</title>
+    <title>Mini Cloudflare</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            max-width: 600px; 
+            margin: 40px auto; 
+            padding: 20px; 
+            background-color: #f9f9f9;
+        }
+        .card { 
+            background: white;
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .file-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        button { 
+            padding: 6px 12px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 4px;
+        }
+        .upload-btn {
+            background-color: #0051c3;
+            color: white;
+            font-weight: bold;
+        }
+        .delete-btn { 
+            background: #e53e3e; 
+            color: white; 
+        }
+        #statusMsg {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
-    <h2>Unggah File Anda</h2>
-    <input type="file" id="fileInput" />
-    <button onclick="unggahFile()">Unggah</button>
+
+    <h2>☁️ Mini Dropbox</h2>
     
-    <p id="status"></p>
+    <!-- Bagian untuk Upload File -->
+    <div class="card">
+        <h3>Upload File Baru</h3>
+        <form id="uploadForm">
+            <input type="file" id="fileInput" required>
+            <button type="submit" class="upload-btn">Upload</button>
+        </form>
+        <p id="statusMsg"></p>
+    </div>
+
+    <!-- Bagian untuk Menampilkan Daftar File -->
+    <div class="card">
+        <h3>Daftar File</h3>
+        <div id="fileList">Loading...</div>
+    </div>
 
     <script>
-        async function unggahFile() {
-            const input = document.getElementById('fileInput');
-            const statusText = document.getElementById('status');
-            
-            if (input.files.length === 0) {
-                statusText.innerText = "Pilih file terlebih dahulu!";
-                return;
-            }
-
-            const file = input.files[0];
-            statusText.innerText = "Mengunggah...";
-
+        // 1. Fungsi untuk mengambil dan menampilkan file
+        async function loadFiles() {
+            const listDiv = document.getElementById('fileList');
             try {
-                // Mengirim file ke API (Pages Functions) yang akan kita buat
-                const response = await fetch(`/api/upload?filename=${file.name}`, {
-                    method: 'PUT',
-                    body: file,
-                });
-
-                if (response.ok) {
-                    statusText.innerText = `Sukses! File berhasil diunggah.`;
-                } else {
-                    statusText.innerText = "Gagal mengunggah file.";
+                const res = await fetch('/api/list');
+                const files = await res.json();
+                
+                if (!files || files.length === 0) {
+                    listDiv.innerHTML = '<p>Belum ada file.</p>';
+                    return;
                 }
-            } catch (error) {
-                statusText.innerText = "Terjadi kesalahan jaringan.";
+
+                // Menampilkan daftar file dalam bentuk HTML
+                listDiv.innerHTML = files.map(file => `
+                    <div class="file-item">
+                        <span>📄 <b>${file.key}</b> (${(file.size / 1024).toFixed(1)} KB)</span>
+                        <button class="delete-btn" onclick="deleteFile('${file.key}')">Hapus</button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                listDiv.innerHTML = '<p style="color:red;">Gagal memuat file. Pastikan Binding R2 sudah diatur di Cloudflare.</p>';
             }
         }
+
+        // 2. Fungsi untuk mengunggah file baru
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const statusMsg = document.getElementById('statusMsg');
+            
+            if (fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            statusMsg.innerText = "⏳ Mengunggah file...";
+            
+            try {
+                const res = await fetch('/api/upload', { 
+                    method: 'POST', 
+                    body: formData 
+                });
+                
+                if (res.ok) {
+                    statusMsg.innerText = "✅ Berhasil diupload!";
+                    fileInput.value = ''; // Reset pilihan file
+                    loadFiles(); // Refresh daftar file
+                } else {
+                    statusMsg.innerText = "❌ Gagal mengunggah file.";
+                }
+            } catch (err) {
+                statusMsg.innerText = "❌ Terjadi kesalahan pada koneksi.";
+            }
+        });
+
+        // 3. Fungsi untuk menghapus file dari R2
+        async function deleteFile(key) {
+            if(confirm(`Yakin ingin menghapus file "${key}"?`)) {
+                try {
+                    await fetch(`/api/delete?key=${encodeURIComponent(key)}`, { 
+                        method: 'DELETE' 
+                    });
+                    loadFiles(); // Refresh daftar file setelah dihapus
+                } catch (err) {
+                    alert("Gagal menghapus file.");
+                }
+            }
+        }
+
+        // Jalankan fungsi loadFiles() secara otomatis ketika website dibuka
+        loadFiles();
     </script>
 </body>
 </html>

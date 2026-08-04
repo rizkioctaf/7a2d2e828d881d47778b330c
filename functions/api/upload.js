@@ -1,19 +1,11 @@
-export async function onRequestPut(context) {
-    // context.env.MY_BUCKET adalah penghubung ke R2 Anda
-    const request = context.request;
-    const url = new URL(request.url);
-    const filename = url.searchParams.get('filename');
-
-    if (!filename) {
-        return new Response('Nama file tidak ditemukan', { status: 400 });
-    }
-
-    try {
-        // Menyimpan data (body) langsung ke R2 Bucket
-        await context.env.MY_BUCKET.put(filename, request.body);
-        
-        return new Response('File berhasil disimpan di R2!', { status: 200 });
-    } catch (error) {
-        return new Response('Gagal menyimpan file', { status: 500 });
-    }
+export async function onRequestPost(context) {
+  const request = context.request;
+  const formData = await request.formData();
+  const file = formData.get('file'); // Mengambil file dari form HTML
+  
+  if (!file) return new Response('Tidak ada file', { status: 400 });
+  
+  // Menyimpan file ke R2 dengan nama aslinya
+  await context.env.MY_BUCKET.put(file.name, file.stream());
+  return new Response('Berhasil upload', { status: 200 });
 }
