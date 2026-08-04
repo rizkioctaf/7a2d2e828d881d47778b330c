@@ -12,10 +12,9 @@
             margin: 0 auto; 
             padding: 20px; 
             background-color: #f0f4f8; 
-            color: #333;
+            color: #333; 
         }
         h2 { text-align: center; color: #1a1a1a; margin-bottom: 30px; }
-        
         .card { 
             background: white; 
             border: none; 
@@ -26,103 +25,135 @@
         }
         
         /* === AREA DRAG & DROP === */
-        .drop-zone {
-            border: 2px dashed #0051c3;
-            border-radius: 10px;
-            padding: 40px 20px;
-            text-align: center;
-            background-color: #f9fbff;
-            color: #555;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 15px;
+        .drop-zone { 
+            border: 2px dashed #0051c3; 
+            border-radius: 10px; 
+            padding: 40px 20px; 
+            text-align: center; 
+            background-color: #f9fbff; 
+            color: #555; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            margin-bottom: 10px; 
         }
-        .drop-zone:hover, .drop-zone.dragover {
-            background-color: #e2edff;
-            border-color: #003d93;
-            color: #003d93;
+        .drop-zone:hover, .drop-zone.dragover { 
+            background-color: #e2edff; 
+            border-color: #003d93; 
+            color: #003d93; 
         }
         .drop-zone p { margin: 0; font-size: 1.1em; pointer-events: none; }
         .drop-zone span { font-size: 2em; display: block; margin-bottom: 10px; pointer-events: none; }
-        
-        /* Sembunyikan input file bawaan yang jelek */
         #fileInput { display: none; }
 
-        /* === PENCARIAN & LIST FILE === */
-        .search-box {
-            width: 100%; padding: 12px 15px; margin-bottom: 20px; 
-            border: 1px solid #ddd; border-radius: 8px; 
-            box-sizing: border-box; font-size: 1em;
-            transition: border-color 0.3s;
+        /* === KOTAK CENTANG SEMENTARA === */
+        .checkbox-group { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-bottom: 15px; 
+            font-size: 0.95em; 
+            cursor: pointer; 
+            color: #444; 
         }
-        .search-box:focus {
-            outline: none; border-color: #0051c3; box-shadow: 0 0 0 3px rgba(0, 81, 195, 0.1);
-        }
+        .checkbox-group input { cursor: pointer; width: 16px; height: 16px; }
 
+        /* === PENCARIAN & LIST FILE === */
+        .search-box { 
+            width: 100%; 
+            padding: 12px 15px; 
+            margin-bottom: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            font-size: 1em; 
+            transition: border-color 0.3s; 
+        }
+        .search-box:focus { outline: none; border-color: #0051c3; box-shadow: 0 0 0 3px rgba(0, 81, 195, 0.1); }
         .file-item { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 15px; border-bottom: 1px solid #f0f0f0; 
-            transition: background 0.2s;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 15px; 
+            border-bottom: 1px solid #f0f0f0; 
+            transition: background 0.2s; 
         }
         .file-item:hover { background-color: #fafbfc; }
         .file-item:last-child { border-bottom: none; }
         
         .file-info { flex-grow: 1; overflow: hidden; margin-right: 15px; }
-        .file-info strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1.05em; }
+        .file-info strong { 
+            display: flex; 
+            align-items: center; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            font-size: 1.05em; 
+        }
         .file-info small { color: #888; margin-top: 4px; display: block; }
         
+        /* Lencana File Sementara */
+        .badge-temp { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            font-size: 0.7em; 
+            padding: 3px 8px; 
+            border-radius: 12px; 
+            margin-left: 10px; 
+            font-weight: bold; 
+            border: 1px solid #ffeeba; 
+        }
+
         /* === TOMBOL AKSI === */
         .action-group { display: flex; gap: 8px; flex-shrink: 0; }
         button, .btn-link { 
-            padding: 8px 12px; cursor: pointer; border-radius: 6px; 
-            font-weight: 600; border: none; text-decoration: none; 
-            font-size: 0.85em; text-align: center; transition: background 0.2s;
+            padding: 8px 12px; 
+            cursor: pointer; 
+            border-radius: 6px; 
+            font-weight: 600; 
+            border: none; 
+            text-decoration: none; 
+            font-size: 0.85em; 
+            text-align: center; 
+            transition: background 0.2s; 
         }
-        
         .upload-btn { background: #0051c3; color: white; padding: 12px 20px; font-size: 1em; width: 100%; border-radius: 8px; }
         .upload-btn:hover { background: #003d93; }
         .upload-btn:disabled { background: #ccc; cursor: not-allowed; }
-        
         .view-btn { background: #e6f4ea; color: #1e8e3e; }
         .view-btn:hover { background: #ceead6; }
-        
         .copy-btn { background: #fef7e0; color: #b08d00; }
         .copy-btn:hover { background: #fce8a4; }
-        
         .delete-btn { background: #fce8e6; color: #d93025; }
         .delete-btn:hover { background: #fad2cf; }
-        
         #statusMsg { margin-top: 15px; font-size: 0.95em; text-align: center; font-weight: 500; }
 
         /* === TOAST NOTIFICATION === */
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 8px; padding: 12px 20px; position: fixed;
-            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%);
-            font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0;
-            transition: opacity 0.3s, bottom 0.3s, visibility 0.3s;
+        #toast { 
+            visibility: hidden; 
+            min-width: 250px; 
+            background-color: #333; 
+            color: #fff; 
+            text-align: center; 
+            border-radius: 8px; 
+            padding: 12px 20px; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 50%; 
+            bottom: 30px; 
+            transform: translateX(-50%); 
+            font-size: 15px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            opacity: 0; 
+            transition: opacity 0.3s, bottom 0.3s, visibility 0.3s; 
         }
         #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
 
         /* === RESPONSIVE UNTUK MOBILE (HP) === */
         @media (max-width: 600px) {
-            .file-item {
-                flex-direction: column; /* Mengubah susunan ke bawah di layar kecil */
-                align-items: flex-start;
-                gap: 12px;
-            }
-            .action-group {
-                width: 100%;
-                justify-content: space-between; /* Menyebar tombol rata kiri-kanan */
-            }
-            button, .btn-link {
-                flex: 1; /* Membuat tombol berukuran sama besar */
-                padding: 10px 5px;
-            }
-            .file-info {
-                width: 100%;
-                margin-right: 0;
-            }
+            .file-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .action-group { width: 100%; justify-content: space-between; }
+            button, .btn-link { flex: 1; padding: 10px 5px; }
+            .file-info { width: 100%; margin-right: 0; }
         }
     </style>
 </head>
@@ -134,13 +165,17 @@
         <h3>Upload File Baru</h3>
         <form id="uploadForm">
             
-            <!-- Area Drag & Drop -->
             <div id="dropZone" class="drop-zone">
                 <span>📁</span>
                 <p id="dropText">Seret & jatuhkan file di sini, atau klik untuk memilih</p>
-                <!-- Input file asli disembunyikan -->
                 <input type="file" id="fileInput" required>
             </div>
+            
+            <!-- Tambahan Kotak Centang File Sementara -->
+            <label class="checkbox-group">
+                <input type="checkbox" id="tempCheck">
+                Jadikan file sementara (Otomatis terhapus dalam 30 Hari)
+            </label>
             
             <button type="submit" id="uploadBtn" class="upload-btn">Upload File</button>
         </form>
@@ -149,7 +184,7 @@
 
     <div class="card">
         <h3>Daftar File</h3>
-        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Cari file...">
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Cari nama file...">
         <div id="fileList">Memuat data...</div>
     </div>
 
@@ -158,69 +193,49 @@
     <script>
         let allFiles = [];
 
-        // ----------------------------------------------------
-        // LOGIKA DRAG AND DROP
-        // ----------------------------------------------------
+        // --- LOGIKA DRAG AND DROP ---
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const dropText = document.getElementById('dropText');
 
-        // Jika area diklik, buka dialog file
         dropZone.addEventListener('click', () => fileInput.click());
-
-        // Saat file diseret ke atas area
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        // Saat file meninggalkan area
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        // Saat file dilepaskan di area
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            
             if (e.dataTransfer.files.length > 0) {
                 fileInput.files = e.dataTransfer.files;
                 updateDropText();
             }
         });
-
-        // Saat file dipilih melalui klik (dialog)
         fileInput.addEventListener('change', updateDropText);
 
         function updateDropText() {
             if (fileInput.files.length > 0) {
                 dropText.innerHTML = `File terpilih:<br><strong>${fileInput.files[0].name}</strong>`;
-                dropZone.style.backgroundColor = "#e2edff";
-                dropZone.style.borderColor = "#0051c3";
+                dropZone.style.backgroundColor = "#e2edff"; dropZone.style.borderColor = "#0051c3";
             } else {
                 dropText.innerText = "Seret & jatuhkan file di sini, atau klik untuk memilih";
-                dropZone.style.backgroundColor = "";
-                dropZone.style.borderColor = "";
+                dropZone.style.backgroundColor = ""; dropZone.style.borderColor = "";
             }
         }
 
-        // ----------------------------------------------------
-        // LOGIKA UPLOAD
-        // ----------------------------------------------------
+        // --- LOGIKA UPLOAD ---
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const statusMsg = document.getElementById('statusMsg');
             const uploadBtn = document.getElementById('uploadBtn');
+            const isTemp = document.getElementById('tempCheck').checked; // Ambil nilai centang
             
             if (fileInput.files.length === 0) return;
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+            formData.append('isTemp', isTemp); // Kirim data sementara ke API
 
             statusMsg.innerText = "⏳ Mengunggah file...";
             statusMsg.style.color = "#0051c3";
-            uploadBtn.disabled = true;
-            uploadBtn.innerText = "Mengunggah...";
+            uploadBtn.disabled = true; uploadBtn.innerText = "Mengunggah...";
             
             try {
                 const response = await fetch('/api/upload', { method: 'POST', body: formData });
@@ -228,9 +243,10 @@
                     statusMsg.innerText = "✅ File berhasil diunggah!";
                     statusMsg.style.color = "green";
                     
-                    // Reset form & Dropzone
+                    // Reset semuanya
                     fileInput.value = ''; 
                     updateDropText();
+                    document.getElementById('tempCheck').checked = false; // Reset centang
                     document.getElementById('searchInput').value = ''; 
                     
                     loadFiles(); 
@@ -239,14 +255,11 @@
                 statusMsg.innerText = "❌ Terjadi kesalahan saat mengunggah.";
                 statusMsg.style.color = "red";
             } finally {
-                uploadBtn.disabled = false;
-                uploadBtn.innerText = "Upload File";
+                uploadBtn.disabled = false; uploadBtn.innerText = "Upload File";
             }
         });
 
-        // ----------------------------------------------------
-        // LOGIKA MENAMPILKAN, MENCARI, MENGHAPUS, MENYALIN FILE
-        // ----------------------------------------------------
+        // --- LOGIKA DAFTAR FILE ---
         async function loadFiles() {
             try {
                 const res = await fetch('/api/list');
@@ -259,7 +272,6 @@
 
         function renderFiles(filesToShow) {
             const listDiv = document.getElementById('fileList');
-            
             if (!filesToShow || filesToShow.length === 0) {
                 listDiv.innerHTML = '<p style="color: #888;">File tidak ditemukan.</p>';
                 return;
@@ -268,17 +280,23 @@
             listDiv.innerHTML = filesToShow.map(file => {
                 const fileUrl = `${window.location.origin}/api/view?key=${encodeURIComponent(file.key)}`;
                 
+                // Cek apakah file berada di folder temp/
+                const isTempFile = file.key.startsWith('temp/');
+                // Jika iya, sembunyikan tulisan temp/ agar nama file lebih rapi dibaca user
+                const displayName = isTempFile ? file.key.substring(5) : file.key;
+                const badge = isTempFile ? `<span class="badge-temp">⏳ 30 Hari</span>` : '';
+
                 let icon = '📄';
-                if (file.key.match(/\.(mp4|webm|mkv|mov)$/i)) icon = '🎥';
-                else if (file.key.match(/\.(mp3|wav|ogg|m4a)$/i)) icon = '🎵';
-                else if (file.key.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) icon = '🖼️';
-                else if (file.key.match(/\.(pdf)$/i)) icon = '📕';
-                else if (file.key.match(/\.(zip|rar|7z)$/i)) icon = '📦';
+                if (displayName.match(/\.(mp4|webm|mkv|mov)$/i)) icon = '🎥';
+                else if (displayName.match(/\.(mp3|wav|ogg|m4a)$/i)) icon = '🎵';
+                else if (displayName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) icon = '🖼️';
+                else if (displayName.match(/\.(pdf)$/i)) icon = '📕';
+                else if (displayName.match(/\.(zip|rar|7z)$/i)) icon = '📦';
 
                 return `
                 <div class="file-item">
                     <div class="file-info">
-                        <strong>${icon} ${file.key}</strong> 
+                        <strong>${icon} &nbsp;${displayName} ${badge}</strong> 
                         <small>${(file.size / 1024).toFixed(1)} KB</small>
                     </div>
                     <div class="action-group">
@@ -293,12 +311,16 @@
 
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const keyword = e.target.value.toLowerCase();
-            const filteredFiles = allFiles.filter(file => file.key.toLowerCase().includes(keyword));
+            // Pencarian juga mengabaikan teks "temp/"
+            const filteredFiles = allFiles.filter(file => {
+                const searchName = file.key.startsWith('temp/') ? file.key.substring(5) : file.key;
+                return searchName.toLowerCase().includes(keyword);
+            });
             renderFiles(filteredFiles);
         });
 
         async function deleteFile(key) {
-            if(confirm(`Yakin ingin menghapus file "${key}"?`)) {
+            if(confirm(`Yakin ingin menghapus file ini?`)) {
                 try {
                     await fetch(`/api/delete?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
                     document.getElementById('searchInput').value = ''; 
@@ -311,7 +333,7 @@
 
         function showToast(message) {
             const toast = document.getElementById("toast");
-            toast.innerText = message;
+            toast.innerText = message; 
             toast.classList.add("show");
             setTimeout(() => { toast.classList.remove("show"); }, 3000);
         }
@@ -319,12 +341,11 @@
         function copyLink(url) {
             navigator.clipboard.writeText(url).then(() => {
                 showToast("✅ Link berhasil disalin!");
-            }).catch(() => {
-                showToast("❌ Gagal menyalin link.");
+            }).catch(() => { 
+                showToast("❌ Gagal menyalin link."); 
             });
         }
 
-        // Jalankan saat halaman dimuat
         loadFiles();
     </script>
 </body>
