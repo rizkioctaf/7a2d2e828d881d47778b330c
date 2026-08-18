@@ -1,4 +1,45 @@
-<!-- HALAMAN LOGIN / REGISTER -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare D1 Chat dengan Auth & Hapus Akun</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 500px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
+        
+        .box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; }
+        
+        #auth-container { text-align: center; }
+        .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        
+        #chat-container { display: none; }
+        #chat-box { height: 350px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; }
+        
+        .message { margin-bottom: 15px; }
+        .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
+        
+        .inputs { display: flex; gap: 10px; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="text"], input[type="password"] { width: 100%; box-sizing: border-box; }
+        #content { flex-grow: 1; }
+        
+        button { padding: 10px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
+        button:hover { background: #003682; }
+        
+        .btn-danger { background: #d93025; }
+        .btn-danger:hover { background: #b3261e; }
+        .btn-secondary { background: #5f6368; }
+        .btn-secondary:hover { background: #3c4043; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .header-buttons { display: flex; gap: 5px; }
+        
+        .toggle-link { color: #0051c3; cursor: pointer; text-decoration: underline; font-size: 0.9em; margin-top: 10px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <!-- HALAMAN LOGIN / REGISTER -->
     <div id="auth-container" class="box">
         <h2 id="auth-title">Login ke Chat</h2>
         <form id="auth-form" class="auth-form">
@@ -188,3 +229,5 @@
             fetchMessages(); 
         });
     </script>
+</body>
+</html>
