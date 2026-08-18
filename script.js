@@ -13,9 +13,26 @@ let mode = 'login'; // Pilihan: 'login', 'register', 'reset'
 let currentUser = localStorage.getItem('username');
 let chatInterval;
 let notifTimeout;
+let lastMessageId = 0;
 
 // Konfigurasi Markdown (agar baris baru otomatis jadi <br>)
 marked.setOptions({ breaks: true });
+
+// --- CSS DINAMIS UNTUK FITUR MENTION (@User) ---
+// Kita tambahkan CSS langsung dari script agar kamu tidak perlu edit index.html
+const mentionStyle = document.createElement('style');
+mentionStyle.innerHTML = `
+    .mention { 
+        color: #0051c3; 
+        font-weight: bold; 
+        background: #e8f0fe; 
+        padding: 2px 4px; 
+        border-radius: 4px; 
+        cursor: pointer;
+    }
+    .mention:hover { background: #d2e3fc; }
+`;
+document.head.appendChild(mentionStyle);
 
 // Jika sudah login, langsung masuk ke chat
 if (currentUser) showChat();
