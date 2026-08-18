@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare D1 Chat dengan Auth & Hapus Akun</title>
+    <title>Cloudflare D1 Chat (Full Auth)</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 500px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
-        
         .box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; }
         
-        #auth-container { text-align: center; }
-        .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        #auth-container, #settings-container { text-align: center; }
+        .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 25px;}
         
-        #chat-container { display: none; }
-        #chat-box { height: 350px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; }
+        #chat-container, #settings-container { display: none; }
+        #chat-box { height: 350px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
         
         .message { margin-bottom: 15px; }
         .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
@@ -31,10 +30,11 @@
         .btn-secondary { background: #5f6368; }
         .btn-secondary:hover { background: #3c4043; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; text-align: left;}
         .header-buttons { display: flex; gap: 5px; }
         
         .toggle-link { color: #0051c3; cursor: pointer; text-decoration: underline; font-size: 0.9em; margin-top: 10px; display: inline-block; }
+        h4 { margin-bottom: 5px; text-align: left; color: #333;}
     </style>
 </head>
 <body>
@@ -45,12 +45,34 @@
         <form id="auth-form" class="auth-form">
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
-            <!-- Kolom Kode Validasi (Default disembunyikan karena default-nya halaman login) -->
             <input type="text" id="validation-code" placeholder="Kode Validasi (Tanya Admin)" style="display: none;">
-            
             <button type="submit" id="auth-btn">Masuk</button>
         </form>
         <span class="toggle-link" id="toggle-auth">Belum punya akun? Daftar disini</span>
+    </div>
+
+    <!-- HALAMAN PENGATURAN AKUN -->
+    <div id="settings-container" class="box">
+        <div class="header">
+            <h3>Pengaturan Akun</h3>
+            <button class="btn-secondary" onclick="closeSettings()">Kembali ke Chat</button>
+        </div>
+        
+        <h4>Ganti Username</h4>
+        <form id="edit-username-form" class="inputs" style="margin-bottom: 25px;">
+            <input type="text" id="new-username" placeholder="Username Baru" required>
+            <button type="submit">Simpan</button>
+        </form>
+
+        <h4>Ganti Password</h4>
+        <form id="change-password-form" class="auth-form">
+            <input type="password" id="old-password" placeholder="Password Lama" required>
+            <input type="password" id="new-password" placeholder="Password Baru" required>
+            <button type="submit">Ubah Password</button>
+        </form>
+
+        <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+        <button class="btn-danger" onclick="deleteAccount()" style="width: 100%;">Hapus Akun Permanen</button>
     </div>
 
     <!-- HALAMAN CHAT -->
@@ -58,8 +80,8 @@
         <div class="header">
             <h3>Halo, <span id="user-display"></span>!</h3>
             <div class="header-buttons">
-                <button class="btn-secondary" onclick="logout()">Logout</button>
-                <button class="btn-danger" onclick="deleteAccount()">Hapus Akun</button>
+                <button class="btn-secondary" onclick="openSettings()">Pengaturan</button>
+                <button class="btn-danger" onclick="logout()">Logout</button>
             </div>
         </div>
         <div id="chat-box">Memuat pesan...</div>
@@ -69,165 +91,6 @@
         </form>
     </div>
 
-    <script>
-        const authContainer = document.getElementById('auth-container');
-        const chatContainer = document.getElementById('chat-container');
-        const authForm = document.getElementById('auth-form');
-        const toggleAuthBtn = document.getElementById('toggle-auth');
-        const authTitle = document.getElementById('auth-title');
-        const authBtn = document.getElementById('auth-btn');
-        const validationCodeInput = document.getElementById('validation-code'); // Elemen baru
-        const chatBox = document.getElementById('chat-box');
-        const chatForm = document.getElementById('chat-form');
-        const userDisplay = document.getElementById('user-display');
-
-        let isLoginMode = true;
-        let currentUser = localStorage.getItem('username');
-        let chatInterval;
-
-        if (currentUser) {
-            showChat();
-        }
-
-        // Toggle antara Login dan Register
-        toggleAuthBtn.addEventListener('click', () => {
-            isLoginMode = !isLoginMode;
-            authTitle.innerText = isLoginMode ? "Login ke Chat" : "Daftar Akun Baru";
-            authBtn.innerText = isLoginMode ? "Masuk" : "Daftar";
-            toggleAuthBtn.innerText = isLoginMode ? "Belum punya akun? Daftar disini" : "Sudah punya akun? Login disini";
-            
-            // Munculkan kolom validasi hanya saat Register
-            if (isLoginMode) {
-                validationCodeInput.style.display = 'none';
-                validationCodeInput.required = false;
-            } else {
-                validationCodeInput.style.display = 'block';
-                validationCodeInput.required = true;
-            }
-        });
-
-        authForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const validationCode = document.getElementById('validation-code').value; // Ambil nilai validasi
-            
-            const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
-
-            authBtn.innerText = "Tunggu...";
-            authBtn.disabled = true;
-
-            // Siapkan payload (data yang dikirim ke backend)
-            const payload = { username, password };
-            // Hanya kirim kode validasi jika sedang melakukan pendaftaran
-            if (!isLoginMode) {
-                payload.validationCode = validationCode;
-            }
-
-            try {
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    if (isLoginMode) {
-                        localStorage.setItem('username', data.username);
-                        currentUser = data.username;
-                        showChat();
-                    } else {
-                        alert("Pendaftaran berhasil! Silakan login.");
-                        toggleAuthBtn.click();
-                        document.getElementById('password').value = '';
-                        document.getElementById('validation-code').value = ''; // Bersihkan kode validasi
-                    }
-                } else {
-                    alert("Error: " + data.error); // Menampilkan "Kode validasi salah. Silakan hubungi admin."
-                }
-            } catch (err) {
-                alert("Terjadi kesalahan jaringan.");
-            }
-
-            authBtn.innerText = isLoginMode ? "Masuk" : "Daftar";
-            authBtn.disabled = false;
-        });
-
-        function showChat() {
-            authContainer.style.display = 'none';
-            chatContainer.style.display = 'block';
-            userDisplay.innerText = currentUser;
-            
-            fetchMessages();
-            chatInterval = setInterval(fetchMessages, 3000);
-        }
-
-        function logout() {
-            localStorage.removeItem('username');
-            currentUser = null;
-            clearInterval(chatInterval);
-            
-            chatContainer.style.display = 'none';
-            authContainer.style.display = 'block';
-            
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('validation-code').value = '';
-        }
-
-        async function deleteAccount() {
-            const confirmDelete = confirm("Apakah kamu yakin ingin menghapus akun ini secara permanen? Semua akses akan hilang.");
-            if (confirmDelete) {
-                try {
-                    const res = await fetch('/api/auth/delete', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: currentUser })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        alert("Akun berhasil dihapus!");
-                        logout(); 
-                    } else {
-                        alert("Gagal menghapus akun: " + data.error);
-                    }
-                } catch (err) {
-                    alert("Terjadi kesalahan jaringan.");
-                }
-            }
-        }
-
-        async function fetchMessages() {
-            try {
-                const res = await fetch('/api/messages');
-                const messages = await res.json();
-                chatBox.innerHTML = '';
-                messages.reverse().forEach(msg => {
-                    const time = new Date(msg.timestamp).toLocaleTimeString('id-ID');
-                    const div = document.createElement('div');
-                    div.className = 'message';
-                    div.innerHTML = `<strong>${msg.sender}</strong><span class="meta">${time}</span><br><span>${msg.content}</span>`;
-                    chatBox.appendChild(div);
-                });
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (err) {
-                console.error("Gagal memuat pesan", err);
-            }
-        }
-
-        chatForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const content = document.getElementById('content').value;
-            document.getElementById('content').value = ''; 
-            await fetch('/api/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sender: currentUser, content })
-            });
-            fetchMessages(); 
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
