@@ -200,12 +200,12 @@ async function fetchMessages() {
             const rawHTML = marked.parse(msg.content);
             const safeMarkdownHTML = DOMPurify.sanitize(rawHTML);
 
-            // PENULISAN GAYA IRC: [18/08/2026 21:08:46 WIB] <Username> Message...
+            // Di dalam fetchMessages() -> bagian .forEach
             div.innerHTML = `
                 <div class="avatar">${avatarSVG}</div>
                 <div class="message-content">
-                    <div style="margin-bottom: 4px;">
-                        <span class="meta">[${formattedTime}]</span> 
+                    <div>
+                        <span class="meta">${formattedTime}</span> 
                         <span class="username">&lt;${safeSender}&gt;</span>
                     </div>
                     <div class="markdown-body">${safeMarkdownHTML}</div>

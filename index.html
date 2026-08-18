@@ -10,116 +10,39 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     
     <style>
-        /* === TEMA RETRO TERMINAL / IRC === */
-        body { 
-            font-family: "Courier New", Courier, monospace; 
-            max-width: 800px; 
-            margin: 20px auto; 
-            padding: 15px; 
-            background: #000000; /* Latar hitam pekat */
-            color: #33ff33;    /* Teks hijau terminal */
-        }
-        
-        .box { 
-            background: #000000; 
-            border: 2px solid #33ff33; 
-            padding: 20px; 
-            margin-bottom: 15px; 
-            box-shadow: 4px 4px 0px #004400; /* Efek shadow kaku khas retro */
-        }
-        
-        /* NOTIFIKASI */
-        #notification { display: none; padding: 12px; margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 14px; border: 2px solid; }
-        .notify-success { background-color: #002200; color: #33ff33; border-color: #33ff33; }
-        .notify-error { background-color: #330000; color: #ff3333; border-color: #ff3333; }
-
-        #auth-container, #settings-container { text-align: center; }
-        .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 25px; }
-        #chat-container, #settings-container { display: none; }
-        
-        /* KOTAK CHAT */
-        #chat-box { 
-            height: 450px; 
-            overflow-y: auto; 
-            padding: 10px; 
-            margin-bottom: 15px; 
-            border: 1px dashed #33ff33; 
-            text-align: left; 
-            background: #050505;
-        }
-        
-        /* Custom Scrollbar untuk tampilan Retro */
-        #chat-box::-webkit-scrollbar { width: 12px; }
-        #chat-box::-webkit-scrollbar-track { background: #000; border-left: 1px solid #33ff33; }
-        #chat-box::-webkit-scrollbar-thumb { background: #33ff33; }
-        
-        /* GAYA PESAN & AVATAR */
-        .message-wrapper { display: flex; gap: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dotted #004400; align-items: flex-start;}
-        .avatar { 
-            width: 35px; 
-            height: 35px; 
-            flex-shrink: 0; 
-            overflow: hidden; 
-            border: 1px solid #33ff33;
-            /* Filter CSS agar SVG bewarna-warni berubah menjadi gradasi hijau ala terminal CRT */
-            filter: grayscale(100%) sepia(100%) hue-rotate(70deg) contrast(150%);
-        }
-        .message-content { flex-grow: 1; max-width: calc(100% - 47px); }
-        .meta { font-size: 0.9em; color: #00aa00; }
-        .username { font-weight: bold; color: #ffffff; }
-        
-        /* GAYA MARKDOWN RETRO */
-        .markdown-body { margin-top: 4px; font-size: 14px; line-height: 1.5; color: #33ff33; }
-        .markdown-body p { margin: 0 0 8px 0; white-space: pre-wrap; }
-        .markdown-body p:last-child { margin-bottom: 0; }
-        .markdown-body pre { background: #001100; color: #33ff33; padding: 10px; border: 1px dashed #33ff33; overflow-x: auto; font-family: "Courier New", Courier, monospace; font-size: 13px; }
-        .markdown-body code { background: #003300; color: #33ff33; padding: 2px 5px; font-family: "Courier New", Courier, monospace; }
-        .markdown-body blockquote { border-left: 4px solid #33ff33; margin: 0; padding-left: 10px; color: #00aa00; font-style: italic; }
-        .markdown-body a { color: #ffff33; text-decoration: underline; }
-        
-        /* INPUT & FORM */
-        .inputs { display: flex; gap: 10px; margin-bottom: 25px; align-items: flex-start; }
-        input, textarea { 
-            background: #000000; 
-            color: #33ff33; 
-            padding: 10px; 
-            border: 1px solid #33ff33; 
-            font-size: 14px; 
-            font-family: "Courier New", Courier, monospace;
-            outline: none;
-        }
-        input:focus, textarea:focus { border-width: 2px; }
-        input[type="text"], input[type="password"] { width: 100%; box-sizing: border-box; }
-        textarea#content { flex-grow: 1; resize: vertical; min-height: 44px; }
-        
-        /* TOMBOL KAKU (NO RADIUS) */
-        button { 
-            padding: 12px 15px; 
-            background: #33ff33; 
-            color: #000000; 
-            border: 1px solid #33ff33; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-family: "Courier New", Courier, monospace;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-        button:hover { background: #000000; color: #33ff33; }
-        
-        .btn-danger { background: #ff3333; color: #000000; border-color: #ff3333; }
-        .btn-danger:hover { background: #000000; color: #ff3333; }
-        .btn-secondary { background: #aaaaaa; color: #000000; border-color: #aaaaaa; }
-        .btn-secondary:hover { background: #000000; color: #aaaaaa; }
-        
-        /* HEADER */
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #33ff33; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; text-align: left; }
-        .header-buttons { display: flex; gap: 5px; }
-        .toggle-link { color: #ffff33; cursor: pointer; font-size: 0.9em; margin-top: 5px; display: inline-block; text-decoration: underline; }
-        .toggle-link:hover { color: #33ff33; }
-        h2, h3, h4 { color: #33ff33; margin-top: 0; text-transform: uppercase; }
-        
-        ::placeholder { color: #006600; }
-    </style>
+    :root { --bg: #ffffff; --text: #333333; --border: #e0e0e0; --accent: #000000; }
+    body { 
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; 
+        max-width: 700px; margin: 40px auto; padding: 20px; 
+        background: var(--bg); color: var(--text); line-height: 1.6;
+    }
+    .box { background: #fff; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; }
+    
+    /* Layout IRC */
+    .message-wrapper { display: flex; gap: 15px; margin-bottom: 12px; font-size: 14px; }
+    .avatar { width: 32px; height: 32px; flex-shrink: 0; border: 1px solid var(--border); }
+    .meta { color: #999; font-size: 0.8em; }
+    .username { font-weight: bold; color: var(--accent); }
+    
+    /* Input & UI */
+    input, textarea { 
+        width: 100%; border: 1px solid var(--border); padding: 10px; 
+        font-family: inherit; outline: none; border-radius: 0;
+    }
+    button { 
+        background: var(--accent); color: #fff; border: none; 
+        padding: 10px 20px; cursor: pointer; text-transform: uppercase; font-weight: bold;
+    }
+    button:hover { opacity: 0.8; }
+    
+    /* Markdown Minimalis */
+    .markdown-body pre { background: #f6f6f6; padding: 10px; border: 1px solid var(--border); }
+    .markdown-body code { background: #f6f6f6; padding: 2px 4px; }
+    
+    /* Header & Nav */
+    .header { border-bottom: 2px solid var(--accent); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    h2, h3 { text-transform: uppercase; letter-spacing: -1px; margin: 0; }
+</style>
 </head>
 <body>
     <div id="notification"></div>
