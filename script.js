@@ -228,9 +228,11 @@ chatTextarea.addEventListener('keydown', function(e) {
 document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const content = chatTextarea.value.trim();
-    if(!content) return;
+    if (!content) return;
     
     chatTextarea.value = '';
+    // Reset tinggi textarea ke ukuran semula setelah kirim
+    chatTextarea.style.height = 'auto'; 
     
     await fetch('/api/messages', {
         method: 'POST',
@@ -238,4 +240,10 @@ document.getElementById('chat-form').addEventListener('submit', async (e) => {
         body: JSON.stringify({ sender: currentUser, content })
     });
     fetchMessages();
+});
+
+// Penyesuaian tinggi textarea otomatis saat mengetik
+chatTextarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
 });
