@@ -1,9 +1,14 @@
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const { username, password } = await request.json();
+    const { username, password, validationCode } = await request.json();
 
-    if (!username || !password) {
-        return new Response(JSON.stringify({ error: "Username dan password wajib diisi" }), { status: 400 });
+    if (!username || !password || !validationCode) {
+        return new Response(JSON.stringify({ error: "Semua kolom wajib diisi!" }), { status: 400 });
+    }
+
+    // PENGECEKAN KODE VALIDASI DARI ENVIRONMENT VARIABLES CLOUDFLARE
+    if (validationCode !== env.REGISTRATION_CODE) {
+        return new Response(JSON.stringify({ error: "Kode validasi salah. Silakan hubungi admin." }), { status: 403 });
     }
 
     // Cek apakah username sudah ada
@@ -12,12 +17,9 @@ export async function onRequestPost(context) {
         return new Response(JSON.stringify({ error: "Username sudah terdaftar" }), { status: 400 });
     }
 
+    // Hashing Password menggunakan PBKDF2 (Sama seperti sebelumnya)
     const encoder = new TextEncoder();
-    
-    // 1. Buat Salt acak (16 bytes)
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    
-    // 2. Siapkan material kunci dari password
     const keyMaterial = await crypto.subtle.importKey(
         "raw", 
         encoder.encode(password), 
@@ -25,27 +27,17 @@ export async function onRequestPost(context) {
         false, 
         ["deriveBits"]
     );
-
-    // 3. Proses Hashing dengan PBKDF2 (SHA-256, 100.000 iterasi)
     const hashBuffer = await crypto.subtle.deriveBits(
-        { 
-            name: "PBKDF2", 
-            salt: salt, 
-            iterations: 100000, 
-            hash: "SHA-256" 
-        },
+        { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
         keyMaterial, 
-        256 // Panjang hash yang dihasilkan (dalam bit)
+        256
     );
 
-    // 4. Ubah Salt dan Hash ke format Hexadecimal (Teks biasa)
     const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
     const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    // 5. Gabungkan menjadi satu string dengan pemisah titik dua (:)
     const storedPassword = `${saltHex}:${hashHex}`;
 
-    // 6. Simpan ke D1
+    // Simpan ke D1
     await env.DB.prepare("INSERT INTO users (username, password) VALUES (?, ?)")
         .bind(username, storedPassword).run();
 
