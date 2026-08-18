@@ -16,7 +16,12 @@ if (currentUser) showChat();
 
 // --- NAVIGATION & UI TOGGLES ---
 document.getElementById('toggle-auth').addEventListener('click', () => {
-    mode = mode === 'login' ? 'register' : 'login';
+    // Jika sedang di halaman reset, tombol ini berfungsi untuk kembali ke login
+    if (mode === 'reset') {
+        mode = 'login';
+    } else {
+        mode = mode === 'login' ? 'register' : 'login';
+    }
     updateAuthUI();
 });
 
@@ -25,34 +30,46 @@ document.getElementById('toggle-reset').addEventListener('click', () => {
     updateAuthUI();
 });
 
+// FUNGSI PERBAIKAN: Mengatur tampilan form secara dinamis
 function updateAuthUI() {
     const authTitle = document.getElementById('auth-title');
     const authBtn = document.getElementById('auth-btn');
     const valCode = document.getElementById('validation-code');
     const resetCode = document.getElementById('reset-code');
+    const toggleAuth = document.getElementById('toggle-auth');
+    const toggleReset = document.getElementById('toggle-reset');
+    const passwordInput = document.getElementById('password'); // Ambil elemen input password
     
     if (mode === 'login') {
         authTitle.innerText = "Login ke Chat";
         authBtn.innerText = "Masuk";
+        passwordInput.placeholder = "Password";
+        
         valCode.style.display = 'none';
         resetCode.style.display = 'none';
-        document.getElementById('toggle-auth').innerText = "Belum punya akun? Daftar disini";
-        document.getElementById('toggle-auth').style.display = 'inline-block';
-        document.getElementById('toggle-reset').style.display = 'inline-block';
+        toggleAuth.innerText = "Belum punya akun? Daftar disini";
+        toggleAuth.style.display = 'inline-block';
+        toggleReset.style.display = 'inline-block';
     } else if (mode === 'register') {
         authTitle.innerText = "Daftar Akun Baru";
         authBtn.innerText = "Daftar";
+        passwordInput.placeholder = "Buat Password Baru";
+        
         valCode.style.display = 'block';
         resetCode.style.display = 'none';
-        document.getElementById('toggle-auth').innerText = "Sudah punya akun? Login disini";
-        document.getElementById('toggle-reset').style.display = 'none';
+        toggleAuth.innerText = "Sudah punya akun? Login disini";
+        toggleAuth.style.display = 'inline-block';
+        toggleReset.style.display = 'none';
     } else if (mode === 'reset') {
         authTitle.innerText = "Reset Password";
         authBtn.innerText = "Simpan Password Baru";
+        passwordInput.placeholder = "Masukkan Password Baru"; // Ubah teks placeholder
+        
         valCode.style.display = 'none';
         resetCode.style.display = 'block';
-        document.getElementById('toggle-auth').style.display = 'none';
-        document.getElementById('toggle-reset').style.display = 'none';
+        toggleAuth.innerText = "Batal / Kembali ke Login"; // Tombol untuk batal reset
+        toggleAuth.style.display = 'inline-block';
+        toggleReset.style.display = 'none';
     }
 }
 
@@ -94,15 +111,23 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
                 currentUser = data.username;
                 showChat();
             } else {
-                alert(mode === 'reset' ? "Password berhasil direset!" : "Pendaftaran berhasil!");
-                location.reload(); // Refresh untuk kembali ke mode login
+                alert(mode === 'reset' ? "Password berhasil direset! Silakan Login." : "Pendaftaran berhasil! Silakan Login.");
+                // Setelah sukses reset/daftar, kembalikan mode ke login lalu render ulang UI
+                document.getElementById('password').value = '';
+                document.getElementById('reset-code').value = '';
+                document.getElementById('validation-code').value = '';
+                mode = 'login';
+                updateAuthUI();
             }
         } else {
             alert("Error: " + data.error);
         }
     } catch (err) { alert("Kesalahan jaringan."); }
 
-    authBtn.innerText = mode === 'register' ? "Daftar" : "Masuk"; 
+    if(mode === 'login') authBtn.innerText = "Masuk";
+    else if(mode === 'register') authBtn.innerText = "Daftar";
+    else authBtn.innerText = "Simpan Password Baru";
+    
     authBtn.disabled = false;
 });
 
@@ -166,7 +191,7 @@ document.getElementById('change-password-form').addEventListener('submit', async
         alert("Password berhasil diubah!");
         document.getElementById('old-password').value = '';
         document.getElementById('new-password').value = '';
-    } else alert("Gagal.");
+    } else alert("Gagal password salah.");
 });
 
 async function deleteAccount() {
