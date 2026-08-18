@@ -3,38 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare D1 Chat</title>
+    <title>Cloudflare D1 Chat (Markdown & Avatar)</title>
+    
+    <!-- Library Markdown & Pembersih XSS -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+    
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 500px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
         .box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         
-        /* GAYA UNTUK NOTIFIKASI IN-PAGE */
-        #notification {
-            display: none;
-            padding: 12px;
-            margin-bottom: 15px;
-            border-radius: 6px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 14px;
-            transition: opacity 0.3s;
-        }
+        #notification { display: none; padding: 12px; margin-bottom: 15px; border-radius: 6px; text-align: center; font-weight: 600; font-size: 14px; }
         .notify-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .notify-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
         #auth-container, #settings-container { text-align: center; }
         .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 25px; }
         #chat-container, #settings-container { display: none; }
-        #chat-box { height: 350px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
-        .message { margin-bottom: 15px; }
+        
+        #chat-box { height: 450px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
+        
+        /* GAYA UNTUK CHAT BARU (AVATAR & LAYOUT) */
+        .message-wrapper { display: flex; gap: 12px; margin-bottom: 18px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden; }
+        .message-content { flex-grow: 1; max-width: calc(100% - 52px); }
         .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
         
-        .inputs { display: flex; gap: 10px; margin-bottom: 25px; }
+        /* GAYA MARKDOWN */
+        .markdown-body { margin-top: 4px; font-size: 14px; line-height: 1.5; color: #333; }
+        .markdown-body p { margin: 0 0 8px 0; white-space: pre-wrap; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body pre { background: #2d2d2d; color: #ccc; padding: 10px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 13px; }
+        .markdown-body code { background: #e8e8e8; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        .markdown-body blockquote { border-left: 4px solid #ccc; margin: 0; padding-left: 10px; color: #666; font-style: italic; }
+        .markdown-body a { color: #0051c3; }
+        
+        .inputs { display: flex; gap: 10px; margin-bottom: 25px; align-items: flex-start; }
         input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         input[type="text"], input[type="password"] { width: 100%; box-sizing: border-box; }
-        #content { flex-grow: 1; }
         
-        button { padding: 10px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        /* GAYA TEXTAREA (MULTI-LINE) */
+        textarea#content { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; resize: vertical; min-height: 44px; font-family: inherit; }
+        
+        button { padding: 12px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; white-space: nowrap;}
         button:hover { background: #003682; }
         .btn-danger { background: #d93025; }
         .btn-danger:hover { background: #b3261e; }
@@ -44,13 +55,10 @@
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; text-align: left; }
         .header-buttons { display: flex; gap: 5px; }
         .toggle-link { color: #0051c3; cursor: pointer; font-size: 0.9em; margin-top: 5px; display: inline-block; font-weight: 500; }
-        .toggle-link:hover { text-decoration: underline; }
         h4 { margin-bottom: 10px; text-align: left; color: #333; margin-top: 0;}
     </style>
 </head>
 <body>
-
-    <!-- WADAH NOTIFIKASI DI DALAM HALAMAN (MENGGANTIKAN ALERT) -->
     <div id="notification"></div>
 
     <div id="auth-container" class="box">
@@ -73,7 +81,7 @@
         </div>
         <h4>Ganti Username</h4>
         <form id="edit-username-form" class="inputs">
-            <input type="text" id="new-username" placeholder="Username Baru (Hanya Huruf & Angka)" required>
+            <input type="text" id="new-username" placeholder="Username Baru" required>
             <button type="submit">Simpan</button>
         </form>
         <h4>Ganti Password</h4>
@@ -95,9 +103,11 @@
             </div>
         </div>
         <div id="chat-box">Memuat pesan...</div>
+        
+        <!-- Textarea menggantikan Input teks -->
         <form id="chat-form" class="inputs" style="margin-bottom: 0;">
-            <input type="text" id="content" placeholder="Ketik pesan..." required autocomplete="off">
-            <button type="submit">Kirim</button>
+            <textarea id="content" placeholder="Ketik pesan markdown... (Shift+Enter u/ Baris Baru)" required></textarea>
+            <button type="submit" id="send-btn">Kirim</button>
         </form>
     </div>
 
