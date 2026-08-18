@@ -6,39 +6,82 @@ const settingsContainer = document.getElementById('settings-container');
 const userDisplay = document.getElementById('user-display');
 const chatBox = document.getElementById('chat-box');
 
-let isLoginMode = true;
+// Mode: 'login', 'register', atau 'reset'
+let mode = 'login'; 
 let currentUser = localStorage.getItem('username');
 let chatInterval;
 
-// Cek login saat pertama kali load
+// Cek login saat halaman dimuat
 if (currentUser) showChat();
 
-// --- AUTH: Toggle Mode ---
+// --- NAVIGATION & UI TOGGLES ---
 document.getElementById('toggle-auth').addEventListener('click', () => {
-    isLoginMode = !isLoginMode;
-    document.getElementById('auth-title').innerText = isLoginMode ? "Login ke Chat" : "Daftar Akun Baru";
-    document.getElementById('auth-btn').innerText = isLoginMode ? "Masuk" : "Daftar";
-    document.getElementById('toggle-auth').innerText = isLoginMode ? "Belum punya akun? Daftar disini" : "Sudah punya akun? Login disini";
-    
-    document.getElementById('validation-code').style.display = isLoginMode ? 'none' : 'block';
-    document.getElementById('validation-code').required = !isLoginMode;
+    mode = mode === 'login' ? 'register' : 'login';
+    updateAuthUI();
 });
 
-// --- AUTH: Login & Register ---
+document.getElementById('toggle-reset').addEventListener('click', () => {
+    mode = 'reset';
+    updateAuthUI();
+});
+
+function updateAuthUI() {
+    const authTitle = document.getElementById('auth-title');
+    const authBtn = document.getElementById('auth-btn');
+    const valCode = document.getElementById('validation-code');
+    const resetCode = document.getElementById('reset-code');
+    
+    if (mode === 'login') {
+        authTitle.innerText = "Login ke Chat";
+        authBtn.innerText = "Masuk";
+        valCode.style.display = 'none';
+        resetCode.style.display = 'none';
+        document.getElementById('toggle-auth').innerText = "Belum punya akun? Daftar disini";
+        document.getElementById('toggle-auth').style.display = 'inline-block';
+        document.getElementById('toggle-reset').style.display = 'inline-block';
+    } else if (mode === 'register') {
+        authTitle.innerText = "Daftar Akun Baru";
+        authBtn.innerText = "Daftar";
+        valCode.style.display = 'block';
+        resetCode.style.display = 'none';
+        document.getElementById('toggle-auth').innerText = "Sudah punya akun? Login disini";
+        document.getElementById('toggle-reset').style.display = 'none';
+    } else if (mode === 'reset') {
+        authTitle.innerText = "Reset Password";
+        authBtn.innerText = "Simpan Password Baru";
+        valCode.style.display = 'none';
+        resetCode.style.display = 'block';
+        document.getElementById('toggle-auth').style.display = 'none';
+        document.getElementById('toggle-reset').style.display = 'none';
+    }
+}
+
+// --- AUTH: Login, Register, & Reset ---
 document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-    const validationCode = document.getElementById('validation-code').value;
+    const valCode = document.getElementById('validation-code').value;
+    const resCode = document.getElementById('reset-code').value;
     const authBtn = document.getElementById('auth-btn');
     
-    authBtn.innerText = "Tunggu..."; authBtn.disabled = true;
+    authBtn.innerText = "Tunggu..."; 
+    authBtn.disabled = true;
 
-    const payload = { username, password };
-    if (!isLoginMode) payload.validationCode = validationCode;
+    let endpoint = '/api/auth/login';
+    let payload = { username, password };
+
+    if (mode === 'register') {
+        endpoint = '/api/auth/register';
+        payload.validationCode = valCode;
+    } else if (mode === 'reset') {
+        endpoint = '/api/auth/reset-password';
+        payload.newPassword = password;
+        payload.resetCode = resCode;
+    }
 
     try {
-        const res = await fetch(isLoginMode ? '/api/auth/login' : '/api/auth/register', {
+        const res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -46,22 +89,24 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
         const data = await res.json();
         
         if (res.ok) {
-            if (isLoginMode) {
+            if (mode === 'login') {
                 localStorage.setItem('username', data.username);
                 currentUser = data.username;
                 showChat();
             } else {
-                alert("Pendaftaran berhasil! Silakan login.");
-                document.getElementById('toggle-auth').click();
-                document.getElementById('password').value = '';
+                alert(mode === 'reset' ? "Password berhasil direset!" : "Pendaftaran berhasil!");
+                location.reload(); // Refresh untuk kembali ke mode login
             }
-        } else alert("Error: " + data.error);
+        } else {
+            alert("Error: " + data.error);
+        }
     } catch (err) { alert("Kesalahan jaringan."); }
 
-    authBtn.innerText = isLoginMode ? "Masuk" : "Daftar"; authBtn.disabled = false;
+    authBtn.innerText = mode === 'register' ? "Daftar" : "Masuk"; 
+    authBtn.disabled = false;
 });
 
-// --- NAVIGATION & SETTINGS ---
+// --- NAVIGATION FUNCTIONS ---
 function showChat() {
     authContainer.style.display = 'none';
     settingsContainer.style.display = 'none';
@@ -84,14 +129,10 @@ function closeSettings() {
 
 function logout() {
     localStorage.removeItem('username');
-    currentUser = null;
-    clearInterval(chatInterval);
-    chatContainer.style.display = 'none';
-    settingsContainer.style.display = 'none';
-    authContainer.style.display = 'block';
+    location.reload();
 }
 
-// --- API ACTIONS ---
+// --- ACCOUNT SETTINGS ACTIONS ---
 document.getElementById('edit-username-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const newUsername = document.getElementById('new-username').value;
@@ -106,6 +147,7 @@ document.getElementById('edit-username-form').addEventListener('submit', async (
         currentUser = data.username;
         localStorage.setItem('username', currentUser);
         userDisplay.innerText = currentUser;
+        document.getElementById('new-username').value = '';
     } else alert("Gagal: " + data.error);
 });
 
@@ -120,12 +162,15 @@ document.getElementById('change-password-form').addEventListener('submit', async
             newPassword: document.getElementById('new-password').value 
         })
     });
-    const data = await res.json();
-    if (res.ok) alert("Password berhasil diubah!"); else alert("Gagal: " + data.error);
+    if (res.ok) {
+        alert("Password berhasil diubah!");
+        document.getElementById('old-password').value = '';
+        document.getElementById('new-password').value = '';
+    } else alert("Gagal.");
 });
 
 async function deleteAccount() {
-    if (confirm("Yakin hapus akun permanen?")) {
+    if (confirm("Yakin hapus akun permanen? Semua data pesan Anda akan tetap ada, tapi akun akan hilang.")) {
         const res = await fetch('/api/auth/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -137,25 +182,29 @@ async function deleteAccount() {
 
 // --- CHAT LOGIC ---
 async function fetchMessages() {
-    const res = await fetch('/api/messages');
-    const messages = await res.json();
-    chatBox.innerHTML = '';
-    messages.reverse().forEach(msg => {
-        const div = document.createElement('div');
-        div.className = 'message';
-        div.innerHTML = `<strong>${msg.sender}</strong><br><span>${msg.content}</span>`;
-        chatBox.appendChild(div);
-    });
-    chatBox.scrollTop = chatBox.scrollHeight;
+    try {
+        const res = await fetch('/api/messages');
+        const messages = await res.json();
+        chatBox.innerHTML = '';
+        messages.reverse().forEach(msg => {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.innerHTML = `<strong>${msg.sender}</strong><br><span>${msg.content}</span>`;
+            chatBox.appendChild(div);
+        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } catch (err) { console.error("Error loading chat"); }
 }
 
 document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const content = document.getElementById('content').value;
+    if(!content) return;
+    document.getElementById('content').value = '';
     await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: currentUser, content: document.getElementById('content').value })
+        body: JSON.stringify({ sender: currentUser, content })
     });
-    document.getElementById('content').value = '';
     fetchMessages();
 });
