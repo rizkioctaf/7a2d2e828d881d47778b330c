@@ -3,49 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare D1 Chat</title>
+    <title>Cloudflare Chat (Media & Markdown)</title>
+    
+    <!-- Library untuk Markdown & Pembersih XSS -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 500px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
         .box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);}
         
-        /* Notifikasi di dalam halaman */
         #notification { display: none; padding: 10px; margin-bottom: 10px; border-radius: 4px; text-align: center; font-size: 14px; font-weight: bold;}
         .notify-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
         .notify-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
 
-        /* Container & Form Utama */
         #auth-container, #settings-container { text-align: center; }
         .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 15px;}
         #chat-container, #settings-container { display: none; }
         
-        /* Area Chat */
-        #chat-box { height: 400px; overflow-y: auto; padding: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; background: #fafafa; border-radius: 4px;}
-        .message { margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        /* Layout Chat dengan Flexbox (Agar tidak memanjang tak terhingga) */
+        #chat-container { display: flex; flex-direction: column; height: 80vh; max-height: 700px; padding: 15px;}
+        #chat-box { flex-grow: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
+        
+        .message { margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
         .message:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
         .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
         
-        /* Input & Tombol */
-        .inputs { display: flex; gap: 10px; }
+        /* Gaya Markdown & Media */
+        .markdown-body { font-size: 14.5px; line-height: 1.5; color: #333; margin-top: 5px; }
+        .markdown-body p { margin: 0 0 5px 0; white-space: pre-wrap; }
+        .markdown-body img, .markdown-body video { max-width: 100%; border-radius: 8px; margin-top: 5px; background: #000; }
+        .markdown-body audio { width: 100%; margin-top: 5px; outline: none; }
+        .markdown-body pre { background: #f4f4f4; padding: 10px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #ddd;}
+        .markdown-body code { background: #eaeaea; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        
+        /* Input Teks & Attachment */
+        .chat-input-area { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+        .btn-attach { padding: 10px; background: #e0e0e0; color: #333; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
+        .btn-attach:hover { background: #ccc; }
+        
+        textarea#content { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; resize: none; overflow-y: auto; min-height: 20px; max-height: 120px; line-height: 1.4;}
+        
         input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 14px;}
-        button { padding: 10px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap; font-weight: bold; font-size: 14px;}
+        button { padding: 10px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; white-space: nowrap;}
         button:hover { background: #003682; }
         .btn-danger { background: #d93025; }
         .btn-danger:hover { background: #b3261e; }
         .btn-secondary { background: #5f6368; }
-        .btn-secondary:hover { background: #3c4043; }
         
-        /* Header & Link navigasi */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;}
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 10px; flex-shrink: 0;}
         .toggle-link { color: #0051c3; cursor: pointer; font-size: 0.9em; margin-top: 10px; display: inline-block; font-weight: 500;}
-        .toggle-link:hover { text-decoration: underline; }
+        
+        #upload-status { font-size: 12px; color: #0051c3; margin-top: 5px; font-weight: bold; display: none; text-align: left;}
     </style>
 </head>
 <body>
 
-    <!-- Wadah Notifikasi Error / Sukses -->
     <div id="notification"></div>
 
-    <!-- HALAMAN LOGIN / REGISTER / RESET -->
+    <!-- WADAH AUTH & SETTINGS (Sama seperti sebelumnya) -->
     <div id="auth-container" class="box">
         <h2 id="auth-title">Login ke Chat</h2>
         <form id="auth-form" class="auth-form">
@@ -59,31 +75,18 @@
         <div><span class="toggle-link" id="toggle-reset" style="color: #d93025;">Lupa password? Klik di sini</span></div>
     </div>
 
-    <!-- HALAMAN PENGATURAN -->
     <div id="settings-container" class="box">
         <div class="header">
             <h3 style="margin: 0;">Pengaturan</h3>
             <button class="btn-secondary" onclick="closeSettings()">Kembali</button>
         </div>
-        
-        <h4 style="text-align: left; margin: 10px 0 5px 0;">Ganti Username</h4>
-        <form id="edit-username-form" class="inputs" style="margin-bottom: 15px;">
-            <input type="text" id="new-username" placeholder="Username Baru" required>
-            <button type="submit">Simpan</button>
-        </form>
-        
-        <h4 style="text-align: left; margin: 10px 0 5px 0;">Ganti Password</h4>
-        <form id="change-password-form" class="auth-form">
-            <input type="password" id="old-password" placeholder="Password Lama" required>
-            <input type="password" id="new-password" placeholder="Password Baru" required>
-            <button type="submit">Ubah Password</button>
-        </form>
-        
+        <form id="edit-username-form" style="margin: 15px 0;"><input type="text" id="new-username" placeholder="Username Baru" required style="margin-bottom: 5px;"><button type="submit" style="width:100%;">Simpan Username</button></form>
+        <form id="change-password-form"><input type="password" id="old-password" placeholder="Password Lama" required style="margin-bottom: 5px;"><input type="password" id="new-password" placeholder="Password Baru" required style="margin-bottom: 5px;"><button type="submit" style="width:100%;">Ubah Password</button></form>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
         <button class="btn-danger" onclick="deleteAccount()" style="width: 100%;">Hapus Akun Permanen</button>
     </div>
 
-    <!-- HALAMAN CHAT -->
+    <!-- AREA CHAT (Dengan Media & Multiline) -->
     <div id="chat-container" class="box">
         <div class="header">
             <h3 style="margin: 0;">Halo, <span id="user-display"></span>!</h3>
@@ -95,9 +98,16 @@
         
         <div id="chat-box">Memuat pesan...</div>
         
-        <form id="chat-form" class="inputs">
-            <input type="text" id="content" placeholder="Ketik pesan..." required autocomplete="off">
-            <button type="submit">Kirim</button>
+        <div id="upload-status">⏳ Mengunggah media...</div>
+        
+        <!-- Form Multiline & Upload -->
+        <form id="chat-form" class="chat-input-area">
+            <!-- Tombol Pilih File -->
+            <label for="file-input" class="btn-attach" title="Kirim Gambar/Video/Audio">📎</label>
+            <input type="file" id="file-input" accept="image/*,video/*,audio/*" style="display: none;">
+            
+            <textarea id="content" placeholder="Ketik pesan... (Shift+Enter untuk baris baru)" rows="1" required></textarea>
+            <button type="submit" id="send-btn">Kirim</button>
         </form>
     </div>
 
