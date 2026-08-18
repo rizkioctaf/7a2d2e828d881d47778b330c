@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare D1 Chat</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 500px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
+        #chat-box { background: white; border: 1px solid #ddd; border-radius: 8px; height: 400px; overflow-y: auto; padding: 15px; margin-bottom: 15px; }
+        .message { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .message:last-child { border-bottom: none; }
+        .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
+        .inputs { display: flex; gap: 10px; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        #sender { width: 100px; }
+        #content { flex-grow: 1; }
+        button { padding: 10px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #003682; }
+    </style>
+</head>
+<body>
+    <h2>Global Chat</h2>
+    <div id="chat-box">Memuat pesan...</div>
+    
+    <form id="chat-form" class="inputs">
+        <input type="text" id="sender" placeholder="Nama" required>
+        <input type="text" id="content" placeholder="Ketik pesan..." required autocomplete="off">
+        <button type="submit">Kirim</button>
+    </form>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const form = document.getElementById('chat-form');
+
+        // Fungsi mengambil pesan dari API
+        async function fetchMessages() {
+            try {
+                const res = await fetch('/api/messages');
+                const messages = await res.json();
+                
+                chatBox.innerHTML = '';
+                // Dibalik agar pesan terlama di atas, terbaru di bawah
+                messages.reverse().forEach(msg => {
+                    const time = new Date(msg.timestamp).toLocaleTimeString('id-ID');
+                    const div = document.createElement('div');
+                    div.className = 'message';
+                    div.innerHTML = `<strong>${msg.sender}</strong><span class="meta">${time}</span><br><span>${msg.content}</span>`;
+                    chatBox.appendChild(div);
+                });
+                
+                // Auto-scroll ke bawah saat ada pesan baru
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) {
+                console.error("Gagal memuat pesan", err);
+            }
+        }
+
+        // Fungsi mengirim pesan baru
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const sender = document.getElementById('sender').value;
+            const content = document.getElementById('content').value;
+            const inputContent = document.getElementById('content');
+
+            // Kosongkan input sambil menunggu
+            inputContent.value = ''; 
+
+            await fetch('/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sender, content })
+            });
+
+            fetchMessages(); // Muat ulang pesan setelah mengirim
+        });
+
+        // Muat pesan pertama kali, lalu polling setiap 3 detik
+        fetchMessages();
+        setInterval(fetchMessages, 3000);
+    </script>
+</body>
+</html>
