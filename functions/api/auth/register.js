@@ -6,42 +6,31 @@ export async function onRequestPost(context) {
         return new Response(JSON.stringify({ error: "Semua kolom wajib diisi!" }), { status: 400 });
     }
 
-    // PENGECEKAN KODE VALIDASI DARI ENVIRONMENT VARIABLES CLOUDFLARE
-    if (validationCode !== env.REGISTRATION_CODE) {
-        return new Response(JSON.stringify({ error: "Kode validasi salah. Silakan hubungi admin." }), { status: 403 });
+    // VALIDASI ALFANUMERIK (Hanya Huruf dan Angka)
+    const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+    if (!alphanumericRegex.test(username)) {
+        return new Response(JSON.stringify({ error: "Username hanya boleh berisi huruf dan angka tanpa spasi!" }), { status: 400 });
     }
 
-    // Cek apakah username sudah ada
+    if (validationCode !== env.REGISTRATION_CODE) {
+        return new Response(JSON.stringify({ error: "Kode validasi salah atau tidak valid!" }), { status: 403 });
+    }
+
+    // CEK USERNAME UNIK
     const existingUser = await env.DB.prepare("SELECT username FROM users WHERE username = ?").bind(username).first();
     if (existingUser) {
-        return new Response(JSON.stringify({ error: "Username sudah terdaftar" }), { status: 400 });
+        return new Response(JSON.stringify({ error: "Username sudah terdaftar, silakan gunakan yang lain." }), { status: 400 });
     }
 
-    // Hashing Password menggunakan PBKDF2 (Sama seperti sebelumnya)
     const encoder = new TextEncoder();
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    const keyMaterial = await crypto.subtle.importKey(
-        "raw", 
-        encoder.encode(password), 
-        { name: "PBKDF2" }, 
-        false, 
-        ["deriveBits"]
-    );
-    const hashBuffer = await crypto.subtle.deriveBits(
-        { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
-        keyMaterial, 
-        256
-    );
-
+    const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveBits"]);
+    const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
+    
     const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
     const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     const storedPassword = `${saltHex}:${hashHex}`;
 
-    // Simpan ke D1
-    await env.DB.prepare("INSERT INTO users (username, password) VALUES (?, ?)")
-        .bind(username, storedPassword).run();
-
-    return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" }
-    });
+    await env.DB.prepare("INSERT INTO users (username, password) VALUES (?, ?)").bind(username, storedPassword).run();
+    return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
 }

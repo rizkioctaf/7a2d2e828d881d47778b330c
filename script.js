@@ -1,27 +1,42 @@
-// script.js
-
 const authContainer = document.getElementById('auth-container');
 const chatContainer = document.getElementById('chat-container');
 const settingsContainer = document.getElementById('settings-container');
 const userDisplay = document.getElementById('user-display');
 const chatBox = document.getElementById('chat-box');
+const notification = document.getElementById('notification');
 
-// Mode: 'login', 'register', atau 'reset'
 let mode = 'login'; 
 let currentUser = localStorage.getItem('username');
 let chatInterval;
+let notifTimeout;
 
-// Cek login saat halaman dimuat
 if (currentUser) showChat();
+
+// --- FUNGSI NOTIFIKASI IN-PAGE ---
+function showNotification(message, type = 'error') {
+    notification.innerText = message;
+    notification.className = type === 'success' ? 'notify-success' : 'notify-error';
+    notification.style.display = 'block';
+    
+    // Hapus timer lama jika ada agar notifikasi tidak tertutup terlalu cepat
+    clearTimeout(notifTimeout);
+    
+    // Sembunyikan otomatis setelah 4 detik
+    notifTimeout = setTimeout(() => {
+        notification.style.display = 'none';
+    }, 4000);
+}
+
+// --- VALIDASI USERNAME (Regex) ---
+function isValidUsername(username) {
+    const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+    return alphanumericRegex.test(username);
+}
 
 // --- NAVIGATION & UI TOGGLES ---
 document.getElementById('toggle-auth').addEventListener('click', () => {
-    // Jika sedang di halaman reset, tombol ini berfungsi untuk kembali ke login
-    if (mode === 'reset') {
-        mode = 'login';
-    } else {
-        mode = mode === 'login' ? 'register' : 'login';
-    }
+    if (mode === 'reset') mode = 'login';
+    else mode = mode === 'login' ? 'register' : 'login';
     updateAuthUI();
 });
 
@@ -30,20 +45,22 @@ document.getElementById('toggle-reset').addEventListener('click', () => {
     updateAuthUI();
 });
 
-// FUNGSI PERBAIKAN: Mengatur tampilan form secara dinamis
 function updateAuthUI() {
+    notification.style.display = 'none'; // Sembunyikan notifikasi saat ganti mode
     const authTitle = document.getElementById('auth-title');
     const authBtn = document.getElementById('auth-btn');
     const valCode = document.getElementById('validation-code');
     const resetCode = document.getElementById('reset-code');
     const toggleAuth = document.getElementById('toggle-auth');
     const toggleReset = document.getElementById('toggle-reset');
-    const passwordInput = document.getElementById('password'); // Ambil elemen input password
+    const passwordInput = document.getElementById('password');
+    const usernameInput = document.getElementById('username');
     
     if (mode === 'login') {
         authTitle.innerText = "Login ke Chat";
         authBtn.innerText = "Masuk";
         passwordInput.placeholder = "Password";
+        usernameInput.placeholder = "Username";
         
         valCode.style.display = 'none';
         resetCode.style.display = 'none';
@@ -54,6 +71,7 @@ function updateAuthUI() {
         authTitle.innerText = "Daftar Akun Baru";
         authBtn.innerText = "Daftar";
         passwordInput.placeholder = "Buat Password Baru";
+        usernameInput.placeholder = "Username (Hanya Huruf & Angka)";
         
         valCode.style.display = 'block';
         resetCode.style.display = 'none';
@@ -63,11 +81,12 @@ function updateAuthUI() {
     } else if (mode === 'reset') {
         authTitle.innerText = "Reset Password";
         authBtn.innerText = "Simpan Password Baru";
-        passwordInput.placeholder = "Masukkan Password Baru"; // Ubah teks placeholder
+        passwordInput.placeholder = "Masukkan Password Baru";
+        usernameInput.placeholder = "Username Akun Anda";
         
         valCode.style.display = 'none';
         resetCode.style.display = 'block';
-        toggleAuth.innerText = "Batal / Kembali ke Login"; // Tombol untuk batal reset
+        toggleAuth.innerText = "Batal / Kembali ke Login";
         toggleAuth.style.display = 'inline-block';
         toggleReset.style.display = 'none';
     }
@@ -82,6 +101,12 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
     const resCode = document.getElementById('reset-code').value;
     const authBtn = document.getElementById('auth-btn');
     
+    // Pengecekan Username Alfanumerik khusus saat Register
+    if (mode === 'register' && !isValidUsername(username)) {
+        showNotification("Gagal: Username hanya boleh berisi huruf dan angka (tanpa spasi/simbol)!", "error");
+        return;
+    }
+
     authBtn.innerText = "Tunggu..."; 
     authBtn.disabled = true;
 
@@ -109,10 +134,10 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
             if (mode === 'login') {
                 localStorage.setItem('username', data.username);
                 currentUser = data.username;
+                notification.style.display = 'none'; // Bersihkan notif saat berhasil masuk
                 showChat();
             } else {
-                alert(mode === 'reset' ? "Password berhasil direset! Silakan Login." : "Pendaftaran berhasil! Silakan Login.");
-                // Setelah sukses reset/daftar, kembalikan mode ke login lalu render ulang UI
+                showNotification(mode === 'reset' ? "Password berhasil direset! Silakan Login." : "Pendaftaran berhasil! Silakan Login.", "success");
                 document.getElementById('password').value = '';
                 document.getElementById('reset-code').value = '';
                 document.getElementById('validation-code').value = '';
@@ -120,18 +145,16 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
                 updateAuthUI();
             }
         } else {
-            alert("Error: " + data.error);
+            showNotification("Error: " + data.error, "error");
         }
-    } catch (err) { alert("Kesalahan jaringan."); }
+    } catch (err) { showNotification("Terjadi kesalahan jaringan.", "error"); }
 
     if(mode === 'login') authBtn.innerText = "Masuk";
     else if(mode === 'register') authBtn.innerText = "Daftar";
     else authBtn.innerText = "Simpan Password Baru";
-    
     authBtn.disabled = false;
 });
 
-// --- NAVIGATION FUNCTIONS ---
 function showChat() {
     authContainer.style.display = 'none';
     settingsContainer.style.display = 'none';
@@ -143,11 +166,13 @@ function showChat() {
 
 function openSettings() {
     clearInterval(chatInterval);
+    notification.style.display = 'none';
     chatContainer.style.display = 'none';
     settingsContainer.style.display = 'block';
 }
 
 function closeSettings() {
+    notification.style.display = 'none';
     settingsContainer.style.display = 'none';
     showChat();
 }
@@ -161,47 +186,64 @@ function logout() {
 document.getElementById('edit-username-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const newUsername = document.getElementById('new-username').value;
-    const res = await fetch('/api/auth/edit-username', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oldUsername: currentUser, newUsername })
-    });
-    const data = await res.json();
-    if (res.ok) {
-        alert("Username diubah!");
-        currentUser = data.username;
-        localStorage.setItem('username', currentUser);
-        userDisplay.innerText = currentUser;
-        document.getElementById('new-username').value = '';
-    } else alert("Gagal: " + data.error);
+    
+    if (!isValidUsername(newUsername)) {
+        showNotification("Gagal: Username baru hanya boleh berisi huruf dan angka (tanpa spasi)!", "error");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/edit-username', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldUsername: currentUser, newUsername })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showNotification("Username berhasil diubah!", "success");
+            currentUser = data.username;
+            localStorage.setItem('username', currentUser);
+            userDisplay.innerText = currentUser;
+            document.getElementById('new-username').value = '';
+        } else showNotification("Gagal: " + data.error, "error");
+    } catch (err) { showNotification("Kesalahan jaringan.", "error"); }
 });
 
 document.getElementById('change-password-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const res = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            username: currentUser, 
-            oldPassword: document.getElementById('old-password').value, 
-            newPassword: document.getElementById('new-password').value 
-        })
-    });
-    if (res.ok) {
-        alert("Password berhasil diubah!");
-        document.getElementById('old-password').value = '';
-        document.getElementById('new-password').value = '';
-    } else alert("Gagal password salah.");
-});
-
-async function deleteAccount() {
-    if (confirm("Yakin hapus akun permanen? Semua data pesan Anda akan tetap ada, tapi akun akan hilang.")) {
-        const res = await fetch('/api/auth/delete', {
+    try {
+        const res = await fetch('/api/auth/change-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser })
+            body: JSON.stringify({ 
+                username: currentUser, 
+                oldPassword: document.getElementById('old-password').value, 
+                newPassword: document.getElementById('new-password').value 
+            })
         });
-        if (res.ok) { alert("Akun terhapus!"); logout(); } else alert("Gagal.");
+        const data = await res.json();
+        if (res.ok) {
+            showNotification("Password berhasil diubah!", "success");
+            document.getElementById('old-password').value = '';
+            document.getElementById('new-password').value = '';
+        } else showNotification("Gagal: " + data.error, "error");
+    } catch (err) { showNotification("Kesalahan jaringan.", "error"); }
+});
+
+// TETAP MENGGUNAKAN POP-UP BAWAAN UNTUK TINDAKAN DESTRUKTIF INI
+async function deleteAccount() {
+    if (confirm("PERINGATAN: Yakin hapus akun secara permanen? Semua data pesan Anda akan tetap ada, tapi akun akan hilang selamanya.")) {
+        try {
+            const res = await fetch('/api/auth/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser })
+            });
+            if (res.ok) { 
+                alert("Akun terhapus secara permanen."); // Alert terakhir sebelum ter-logout
+                logout(); 
+            } else showNotification("Gagal menghapus akun.", "error");
+        } catch (err) { showNotification("Kesalahan jaringan.", "error"); }
     }
 }
 
