@@ -3,26 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare D1 Chat (Full Auth)</title>
+    <title>Cloudflare D1 Chat (Full Features)</title>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 500px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
-        .box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; }
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            max-width: 500px; 
+            margin: 20px auto; 
+            padding: 15px; 
+            background: #f4f4f9; 
+        }
+        .box { 
+            background: white; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
         
+        /* AUTH UI */
         #auth-container, #settings-container { text-align: center; }
-        .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 25px;}
+        .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 25px; }
         
+        /* CHAT UI */
         #chat-container, #settings-container { display: none; }
-        #chat-box { height: 350px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
-        
+        #chat-box { 
+            height: 350px; 
+            overflow-y: auto; 
+            padding-right: 10px; 
+            margin-bottom: 15px; 
+            border-bottom: 1px solid #ddd; 
+            text-align: left; 
+        }
         .message { margin-bottom: 15px; }
         .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
         
-        .inputs { display: flex; gap: 10px; }
-        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        /* FORM & INPUTS */
+        .inputs { display: flex; gap: 10px; margin-bottom: 25px; }
+        input { 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 14px;
+        }
         input[type="text"], input[type="password"] { width: 100%; box-sizing: border-box; }
         #content { flex-grow: 1; }
         
-        button { padding: 10px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
+        /* BUTTONS */
+        button { 
+            padding: 10px 15px; 
+            background: #0051c3; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: background 0.2s;
+        }
         button:hover { background: #003682; }
         
         .btn-danger { background: #d93025; }
@@ -30,69 +67,108 @@
         .btn-secondary { background: #5f6368; }
         .btn-secondary:hover { background: #3c4043; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; text-align: left;}
+        /* HEADER */
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid #ddd; 
+            padding-bottom: 10px; 
+            margin-bottom: 15px; 
+            flex-wrap: wrap; 
+            gap: 10px; 
+            text-align: left;
+        }
         .header-buttons { display: flex; gap: 5px; }
         
-        .toggle-link { color: #0051c3; cursor: pointer; text-decoration: underline; font-size: 0.9em; margin-top: 10px; display: inline-block; }
-        h4 { margin-bottom: 5px; text-align: left; color: #333;}
+        /* TEXT & LINKS */
+        .toggle-link { 
+            color: #0051c3; 
+            cursor: pointer; 
+            font-size: 0.9em; 
+            margin-top: 5px; 
+            display: inline-block; 
+            font-weight: 500;
+        }
+        .toggle-link:hover { text-decoration: underline; }
+        h4 { margin-bottom: 10px; text-align: left; color: #333; margin-top: 0;}
     </style>
 </head>
 <body>
 
-    <!-- HALAMAN LOGIN / REGISTER -->
+    <!-- ========================================== -->
+    <!-- HALAMAN LOGIN / REGISTER / LUPA PASSWORD   -->
+    <!-- ========================================== -->
     <div id="auth-container" class="box">
         <h2 id="auth-title">Login ke Chat</h2>
         <form id="auth-form" class="auth-form">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="username" placeholder="Username" required autocomplete="username">
+            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+            
+            <!-- Kolom Kode Validasi (Untuk Register) -->
             <input type="text" id="validation-code" placeholder="Kode Validasi (Tanya Admin)" style="display: none;">
+            
+            <!-- Kolom Kode Reset (Untuk Lupa Password) -->
+            <input type="text" id="reset-code" placeholder="Kode Reset (Tanya Admin)" style="display: none;">
+            
             <button type="submit" id="auth-btn">Masuk</button>
         </form>
-        <span class="toggle-link" id="toggle-auth">Belum punya akun? Daftar disini</span>
-        <br>
-        <span class="toggle-link" id="toggle-reset" style="color: #d93025;">Lupa password? Klik di sini</span>
+        
+        <div>
+            <span class="toggle-link" id="toggle-auth">Belum punya akun? Daftar disini</span>
+        </div>
+        <div>
+            <span class="toggle-link" id="toggle-reset" style="color: #d93025;">Lupa password? Klik di sini</span>
+        </div>
     </div>
 
-    <!-- HALAMAN PENGATURAN AKUN -->
+    <!-- ========================================== -->
+    <!-- HALAMAN PENGATURAN AKUN                    -->
+    <!-- ========================================== -->
     <div id="settings-container" class="box">
         <div class="header">
-            <h3>Pengaturan Akun</h3>
+            <h3 style="margin: 0;">Pengaturan Akun</h3>
             <button class="btn-secondary" onclick="closeSettings()">Kembali ke Chat</button>
         </div>
         
         <h4>Ganti Username</h4>
-        <form id="edit-username-form" class="inputs" style="margin-bottom: 25px;">
+        <form id="edit-username-form" class="inputs">
             <input type="text" id="new-username" placeholder="Username Baru" required>
             <button type="submit">Simpan</button>
         </form>
 
         <h4>Ganti Password</h4>
-        <form id="change-password-form" class="auth-form">
+        <form id="change-password-form" class="auth-form" style="margin-bottom: 0;">
             <input type="password" id="old-password" placeholder="Password Lama" required>
             <input type="password" id="new-password" placeholder="Password Baru" required>
             <button type="submit">Ubah Password</button>
         </form>
 
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+        <hr style="border: 0; border-top: 1px solid #ddd; margin: 25px 0;">
         <button class="btn-danger" onclick="deleteAccount()" style="width: 100%;">Hapus Akun Permanen</button>
     </div>
 
-    <!-- HALAMAN CHAT -->
+    <!-- ========================================== -->
+    <!-- HALAMAN CHAT UTAMA                         -->
+    <!-- ========================================== -->
     <div id="chat-container" class="box">
         <div class="header">
-            <h3>Halo, <span id="user-display"></span>!</h3>
+            <h3 style="margin: 0;">Halo, <span id="user-display"></span>!</h3>
             <div class="header-buttons">
                 <button class="btn-secondary" onclick="openSettings()">Pengaturan</button>
                 <button class="btn-danger" onclick="logout()">Logout</button>
             </div>
         </div>
+        
         <div id="chat-box">Memuat pesan...</div>
-        <form id="chat-form" class="inputs">
+        
+        <form id="chat-form" class="inputs" style="margin-bottom: 0;">
             <input type="text" id="content" placeholder="Ketik pesan..." required autocomplete="off">
             <button type="submit">Kirim</button>
         </form>
     </div>
 
+    <!-- Memanggil Logika JavaScript -->
     <script src="script.js"></script>
 </body>
 </html>
