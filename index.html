@@ -3,111 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare D1 Chat (Markdown & Avatar)</title>
+    <title>IRC Retro Chat</title>
     
     <!-- Library Markdown & Pembersih XSS -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 20px auto; padding: 15px; background: #f4f4f9; }
-        .box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        /* === TEMA RETRO TERMINAL / IRC === */
+        body { 
+            font-family: "Courier New", Courier, monospace; 
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 15px; 
+            background: #000000; /* Latar hitam pekat */
+            color: #33ff33;    /* Teks hijau terminal */
+        }
         
-        #notification { display: none; padding: 12px; margin-bottom: 15px; border-radius: 6px; text-align: center; font-weight: 600; font-size: 14px; }
-        .notify-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .notify-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .box { 
+            background: #000000; 
+            border: 2px solid #33ff33; 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            box-shadow: 4px 4px 0px #004400; /* Efek shadow kaku khas retro */
+        }
+        
+        /* NOTIFIKASI */
+        #notification { display: none; padding: 12px; margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 14px; border: 2px solid; }
+        .notify-success { background-color: #002200; color: #33ff33; border-color: #33ff33; }
+        .notify-error { background-color: #330000; color: #ff3333; border-color: #ff3333; }
 
         #auth-container, #settings-container { text-align: center; }
         .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 25px; }
         #chat-container, #settings-container { display: none; }
         
-        #chat-box { height: 450px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
+        /* KOTAK CHAT */
+        #chat-box { 
+            height: 450px; 
+            overflow-y: auto; 
+            padding: 10px; 
+            margin-bottom: 15px; 
+            border: 1px dashed #33ff33; 
+            text-align: left; 
+            background: #050505;
+        }
         
-        /* GAYA UNTUK CHAT BARU (AVATAR & LAYOUT) */
-        .message-wrapper { display: flex; gap: 12px; margin-bottom: 18px; }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden; }
-        .message-content { flex-grow: 1; max-width: calc(100% - 52px); }
-        .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
+        /* Custom Scrollbar untuk tampilan Retro */
+        #chat-box::-webkit-scrollbar { width: 12px; }
+        #chat-box::-webkit-scrollbar-track { background: #000; border-left: 1px solid #33ff33; }
+        #chat-box::-webkit-scrollbar-thumb { background: #33ff33; }
         
-        /* GAYA MARKDOWN */
-        .markdown-body { margin-top: 4px; font-size: 14px; line-height: 1.5; color: #333; }
+        /* GAYA PESAN & AVATAR */
+        .message-wrapper { display: flex; gap: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dotted #004400; align-items: flex-start;}
+        .avatar { 
+            width: 35px; 
+            height: 35px; 
+            flex-shrink: 0; 
+            overflow: hidden; 
+            border: 1px solid #33ff33;
+            /* Filter CSS agar SVG bewarna-warni berubah menjadi gradasi hijau ala terminal CRT */
+            filter: grayscale(100%) sepia(100%) hue-rotate(70deg) contrast(150%);
+        }
+        .message-content { flex-grow: 1; max-width: calc(100% - 47px); }
+        .meta { font-size: 0.9em; color: #00aa00; }
+        .username { font-weight: bold; color: #ffffff; }
+        
+        /* GAYA MARKDOWN RETRO */
+        .markdown-body { margin-top: 4px; font-size: 14px; line-height: 1.5; color: #33ff33; }
         .markdown-body p { margin: 0 0 8px 0; white-space: pre-wrap; }
         .markdown-body p:last-child { margin-bottom: 0; }
-        .markdown-body pre { background: #2d2d2d; color: #ccc; padding: 10px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 13px; }
-        .markdown-body code { background: #e8e8e8; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
-        .markdown-body blockquote { border-left: 4px solid #ccc; margin: 0; padding-left: 10px; color: #666; font-style: italic; }
-        .markdown-body a { color: #0051c3; }
+        .markdown-body pre { background: #001100; color: #33ff33; padding: 10px; border: 1px dashed #33ff33; overflow-x: auto; font-family: "Courier New", Courier, monospace; font-size: 13px; }
+        .markdown-body code { background: #003300; color: #33ff33; padding: 2px 5px; font-family: "Courier New", Courier, monospace; }
+        .markdown-body blockquote { border-left: 4px solid #33ff33; margin: 0; padding-left: 10px; color: #00aa00; font-style: italic; }
+        .markdown-body a { color: #ffff33; text-decoration: underline; }
         
+        /* INPUT & FORM */
         .inputs { display: flex; gap: 10px; margin-bottom: 25px; align-items: flex-start; }
-        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        input, textarea { 
+            background: #000000; 
+            color: #33ff33; 
+            padding: 10px; 
+            border: 1px solid #33ff33; 
+            font-size: 14px; 
+            font-family: "Courier New", Courier, monospace;
+            outline: none;
+        }
+        input:focus, textarea:focus { border-width: 2px; }
         input[type="text"], input[type="password"] { width: 100%; box-sizing: border-box; }
+        textarea#content { flex-grow: 1; resize: vertical; min-height: 44px; }
         
-        /* GAYA TEXTAREA (MULTI-LINE) */
-        textarea#content { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; resize: vertical; min-height: 44px; font-family: inherit; }
+        /* TOMBOL KAKU (NO RADIUS) */
+        button { 
+            padding: 12px 15px; 
+            background: #33ff33; 
+            color: #000000; 
+            border: 1px solid #33ff33; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-family: "Courier New", Courier, monospace;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        button:hover { background: #000000; color: #33ff33; }
         
-        button { padding: 12px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; white-space: nowrap;}
-        button:hover { background: #003682; }
-        .btn-danger { background: #d93025; }
-        .btn-danger:hover { background: #b3261e; }
-        .btn-secondary { background: #5f6368; }
-        .btn-secondary:hover { background: #3c4043; }
+        .btn-danger { background: #ff3333; color: #000000; border-color: #ff3333; }
+        .btn-danger:hover { background: #000000; color: #ff3333; }
+        .btn-secondary { background: #aaaaaa; color: #000000; border-color: #aaaaaa; }
+        .btn-secondary:hover { background: #000000; color: #aaaaaa; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; text-align: left; }
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #33ff33; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; text-align: left; }
         .header-buttons { display: flex; gap: 5px; }
-        .toggle-link { color: #0051c3; cursor: pointer; font-size: 0.9em; margin-top: 5px; display: inline-block; font-weight: 500; }
-        h4 { margin-bottom: 10px; text-align: left; color: #333; margin-top: 0;}
+        .toggle-link { color: #ffff33; cursor: pointer; font-size: 0.9em; margin-top: 5px; display: inline-block; text-decoration: underline; }
+        .toggle-link:hover { color: #33ff33; }
+        h2, h3, h4 { color: #33ff33; margin-top: 0; text-transform: uppercase; }
+        
+        ::placeholder { color: #006600; }
     </style>
 </head>
 <body>
     <div id="notification"></div>
 
     <div id="auth-container" class="box">
-        <h2 id="auth-title">Login ke Chat</h2>
+        <h2 id="auth-title">/*** LOGIN ***/</h2>
         <form id="auth-form" class="auth-form">
-            <input type="text" id="username" placeholder="Username" required autocomplete="username">
-            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
-            <input type="text" id="validation-code" placeholder="Kode Validasi (Tanya Admin)" style="display: none;">
-            <input type="text" id="reset-code" placeholder="Kode Reset (Tanya Admin)" style="display: none;">
-            <button type="submit" id="auth-btn">Masuk</button>
+            <input type="text" id="username" placeholder=">_ USERNAME" required autocomplete="username">
+            <input type="password" id="password" placeholder=">_ PASSWORD" required autocomplete="current-password">
+            <input type="text" id="validation-code" placeholder=">_ KODE_VALIDASI" style="display: none;">
+            <input type="text" id="reset-code" placeholder=">_ KODE_RESET" style="display: none;">
+            <button type="submit" id="auth-btn">EXECUTE</button>
         </form>
-        <div><span class="toggle-link" id="toggle-auth">Belum punya akun? Daftar disini</span></div>
-        <div><span class="toggle-link" id="toggle-reset" style="color: #d93025;">Lupa password? Klik di sini</span></div>
+        <div><span class="toggle-link" id="toggle-auth">[Daftar Akun Baru]</span></div>
+        <div><span class="toggle-link" id="toggle-reset" style="color: #ff3333;">[Lupa Password]</span></div>
     </div>
 
     <div id="settings-container" class="box">
         <div class="header">
-            <h3 style="margin: 0;">Pengaturan</h3>
-            <button class="btn-secondary" onclick="closeSettings()">Kembali</button>
+            <h3 style="margin: 0;">/SETTINGS</h3>
+            <button class="btn-secondary" onclick="closeSettings()">RETURN</button>
         </div>
-        <h4>Ganti Username</h4>
+        <h4>>_ CHANGE USERNAME</h4>
         <form id="edit-username-form" class="inputs">
-            <input type="text" id="new-username" placeholder="Username Baru" required>
-            <button type="submit">Simpan</button>
+            <input type="text" id="new-username" placeholder=">_ NEW_USERNAME" required>
+            <button type="submit">SAVE</button>
         </form>
-        <h4>Ganti Password</h4>
+        <h4>>_ CHANGE PASSWORD</h4>
         <form id="change-password-form" class="auth-form" style="margin-bottom: 0;">
-            <input type="password" id="old-password" placeholder="Password Lama" required>
-            <input type="password" id="new-password" placeholder="Password Baru" required>
-            <button type="submit">Ubah Password</button>
+            <input type="password" id="old-password" placeholder=">_ OLD_PASSWORD" required>
+            <input type="password" id="new-password" placeholder=">_ NEW_PASSWORD" required>
+            <button type="submit">UPDATE</button>
         </form>
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 25px 0;">
-        <button class="btn-danger" onclick="deleteAccount()" style="width: 100%;">Hapus Akun Permanen</button>
+        <hr style="border: 0; border-top: 1px dashed #33ff33; margin: 25px 0;">
+        <button class="btn-danger" onclick="deleteAccount()" style="width: 100%;">!!! DELETE ACCOUNT !!!</button>
     </div>
 
     <div id="chat-container" class="box">
         <div class="header">
-            <h3 style="margin: 0;">Halo, <span id="user-display"></span>!</h3>
+            <h3 style="margin: 0;">/CHANNEL #GENERAL - &lt;<span id="user-display"></span>&gt;</h3>
             <div class="header-buttons">
-                <button class="btn-secondary" onclick="openSettings()">Pengaturan</button>
-                <button class="btn-danger" onclick="logout()">Logout</button>
+                <button class="btn-secondary" onclick="openSettings()">SET</button>
+                <button class="btn-danger" onclick="logout()">EXIT</button>
             </div>
         </div>
-        <div id="chat-box">Memuat pesan...</div>
+        <div id="chat-box">Memuat log sistem...</div>
         
-        <!-- Textarea menggantikan Input teks -->
         <form id="chat-form" class="inputs" style="margin-bottom: 0;">
-            <textarea id="content" placeholder="Ketik pesan markdown... (Shift+Enter u/ Baris Baru)" required></textarea>
-            <button type="submit" id="send-btn">Kirim</button>
+            <textarea id="content" placeholder=">_ Ketik pesan (Markdown didukung). Shift+Enter untuk baris baru." required></textarea>
+            <button type="submit" id="send-btn">SEND</button>
         </form>
     </div>
 

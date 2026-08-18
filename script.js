@@ -10,7 +10,6 @@ let currentUser = localStorage.getItem('username');
 let chatInterval;
 let notifTimeout;
 
-// Setup parser Markdown agar garis baru (\n) otomatis menjadi baris baru (br)
 marked.setOptions({ breaks: true });
 
 if (currentUser) showChat();
@@ -28,7 +27,6 @@ function isValidUsername(username) {
     return alphanumericRegex.test(username);
 }
 
-// --- FUNGSI KEAMANAN TEKS USERNAME ---
 function escapeHTML(str) {
     if (!str) return "";
     return str.replace(/[&<>'"]/g, function(tag) {
@@ -37,7 +35,6 @@ function escapeHTML(str) {
     });
 }
 
-// --- GENERATOR AVATAR SVG (Identik berdasarkan Username) ---
 function generateAvatarSVG(username) {
     let hash = 0;
     for (let i = 0; i < username.length; i++) {
@@ -47,32 +44,28 @@ function generateAvatarSVG(username) {
     const colorCircle = `hsl(${Math.abs(hash * 2) % 360}, 70%, 40%)`;
     const initial = username.charAt(0).toUpperCase();
 
+    // Karena CSS menerapkan filter Hijau/Monokrom, warna aslinya akan di-override
     return `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="100%" height="100%">
             <rect width="40" height="40" fill="${colorBg}" />
-            <circle cx="20" cy="20" r="14" fill="${colorCircle}" opacity="0.8"/>
-            <text x="50%" y="50%" text-anchor="middle" dy=".35em" font-size="16" font-family="Arial, sans-serif" font-weight="bold" fill="#ffffff">${initial}</text>
+            <text x="50%" y="50%" text-anchor="middle" dy=".35em" font-size="24" font-family="'Courier New', monospace" font-weight="bold" fill="#000">${initial}</text>
         </svg>
     `;
 }
 
-// --- FORMAT WAKTU WIB LENGKAP ---
 function formatWaktuWIB(timestampUTC) {
-    // Tambahkan 'Z' agar Javascript tahu itu format UTC dari database
     const date = new Date(timestampUTC + 'Z'); 
     return date.toLocaleString('id-ID', {
         timeZone: 'Asia/Jakarta',
-        weekday: 'long',
         year: 'numeric',
-        month: 'long',
-        day: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
     }) + ' WIB';
 }
 
-// --- NAVIGATION & UI TOGGLES ---
 document.getElementById('toggle-auth').addEventListener('click', () => {
     if (mode === 'reset') mode = 'login';
     else mode = mode === 'login' ? 'register' : 'login';
@@ -94,31 +87,30 @@ function updateAuthUI() {
     const toggleReset = document.getElementById('toggle-reset');
     
     if (mode === 'login') {
-        authTitle.innerText = "Login ke Chat"; authBtn.innerText = "Masuk";
+        authTitle.innerText = "/*** LOGIN ***/"; authBtn.innerText = "EXECUTE";
         valCode.style.display = 'none'; resetCode.style.display = 'none';
-        toggleAuth.innerText = "Belum punya akun? Daftar disini";
+        toggleAuth.innerText = "[Daftar Akun Baru]";
         toggleAuth.style.display = 'inline-block'; toggleReset.style.display = 'inline-block';
     } else if (mode === 'register') {
-        authTitle.innerText = "Daftar Akun Baru"; authBtn.innerText = "Daftar";
+        authTitle.innerText = "/*** REGISTER ***/"; authBtn.innerText = "CREATE";
         valCode.style.display = 'block'; resetCode.style.display = 'none';
-        toggleAuth.innerText = "Sudah punya akun? Login disini";
+        toggleAuth.innerText = "[Sudah Punya Akun? Login]";
         toggleAuth.style.display = 'inline-block'; toggleReset.style.display = 'none';
     } else if (mode === 'reset') {
-        authTitle.innerText = "Reset Password"; authBtn.innerText = "Simpan Password Baru";
+        authTitle.innerText = "/*** SYSTEM RESET ***/"; authBtn.innerText = "OVERRIDE PWD";
         valCode.style.display = 'none'; resetCode.style.display = 'block';
-        toggleAuth.innerText = "Batal / Kembali ke Login";
+        toggleAuth.innerText = "[Abort / Return to Login]";
         toggleAuth.style.display = 'inline-block'; toggleReset.style.display = 'none';
     }
 }
 
-// --- AUTH SUBMIT ---
 document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
     if (mode === 'register' && !isValidUsername(username)) {
-        return showNotification("Username hanya boleh huruf dan angka!", "error");
+        return showNotification("SYS_ERR: Username hanya boleh huruf dan angka!", "error");
     }
 
     document.getElementById('auth-btn').disabled = true;
@@ -137,11 +129,11 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
                 currentUser = data.username;
                 showChat();
             } else {
-                showNotification(mode === 'reset' ? "Password direset!" : "Pendaftaran berhasil!", "success");
+                showNotification(mode === 'reset' ? "SYS_MSG: Password direset!" : "SYS_MSG: Pendaftaran berhasil!", "success");
                 document.getElementById('password').value = ''; mode = 'login'; updateAuthUI();
             }
-        } else showNotification(data.error, "error");
-    } catch (err) { showNotification("Kesalahan jaringan.", "error"); }
+        } else showNotification("SYS_ERR: " + data.error, "error");
+    } catch (err) { showNotification("SYS_ERR: Kesalahan jaringan.", "error"); }
     document.getElementById('auth-btn').disabled = false;
 });
 
@@ -157,20 +149,19 @@ function openSettings() { clearInterval(chatInterval); chatContainer.style.displ
 function closeSettings() { settingsContainer.style.display = 'none'; showChat(); }
 function logout() { localStorage.removeItem('username'); location.reload(); }
 
-// --- SETTINGS ACTIONS ---
 document.getElementById('edit-username-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const newUsername = document.getElementById('new-username').value;
-    if (!isValidUsername(newUsername)) return showNotification("Username hanya boleh huruf dan angka!", "error");
+    if (!isValidUsername(newUsername)) return showNotification("SYS_ERR: Username hanya boleh huruf dan angka!", "error");
 
     try {
         const res = await fetch('/api/auth/edit-username', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldUsername: currentUser, newUsername }) });
         const data = await res.json();
         if (res.ok) {
-            showNotification("Username diubah!", "success");
+            showNotification("SYS_MSG: Username diubah!", "success");
             currentUser = data.username; localStorage.setItem('username', currentUser); userDisplay.innerText = currentUser;
-        } else showNotification(data.error, "error");
-    } catch (err) { showNotification("Kesalahan jaringan.", "error"); }
+        } else showNotification("SYS_ERR: " + data.error, "error");
+    } catch (err) { showNotification("SYS_ERR: Kesalahan jaringan.", "error"); }
 });
 
 document.getElementById('change-password-form').addEventListener('submit', async (e) => {
@@ -181,18 +172,17 @@ document.getElementById('change-password-form').addEventListener('submit', async
             body: JSON.stringify({ username: currentUser, oldPassword: document.getElementById('old-password').value, newPassword: document.getElementById('new-password').value })
         });
         const data = await res.json();
-        if (res.ok) showNotification("Password diubah!", "success"); else showNotification(data.error, "error");
-    } catch (err) { showNotification("Kesalahan jaringan.", "error"); }
+        if (res.ok) showNotification("SYS_MSG: Password diubah!", "success"); else showNotification("SYS_ERR: " + data.error, "error");
+    } catch (err) { showNotification("SYS_ERR: Kesalahan jaringan.", "error"); }
 });
 
 async function deleteAccount() {
-    if (confirm("PERINGATAN: Yakin hapus akun permanen?")) {
+    if (confirm("CRITICAL WARNING: Yakin hapus akun permanen?")) {
         const res = await fetch('/api/auth/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: currentUser }) });
-        if (res.ok) logout(); else showNotification("Gagal hapus akun.", "error");
+        if (res.ok) logout(); else showNotification("SYS_ERR: Gagal hapus akun.", "error");
     }
 }
 
-// --- CHAT LOGIC ---
 async function fetchMessages() {
     try {
         const res = await fetch('/api/messages');
@@ -203,20 +193,20 @@ async function fetchMessages() {
             const div = document.createElement('div');
             div.className = 'message-wrapper';
             
-            // Generate Avatar & Waktu
             const avatarSVG = generateAvatarSVG(msg.sender);
             const formattedTime = formatWaktuWIB(msg.timestamp);
             const safeSender = escapeHTML(msg.sender);
             
-            // Konversi pesan Markdown -> HTML, lalu bersihkan dari XSS dengan DOMPurify
             const rawHTML = marked.parse(msg.content);
             const safeMarkdownHTML = DOMPurify.sanitize(rawHTML);
 
+            // PENULISAN GAYA IRC: [18/08/2026 21:08:46 WIB] <Username> Message...
             div.innerHTML = `
                 <div class="avatar">${avatarSVG}</div>
                 <div class="message-content">
-                    <div style="margin-bottom: 2px;">
-                        <strong>${safeSender}</strong> <span class="meta">${formattedTime}</span>
+                    <div style="margin-bottom: 4px;">
+                        <span class="meta">[${formattedTime}]</span> 
+                        <span class="username">&lt;${safeSender}&gt;</span>
                     </div>
                     <div class="markdown-body">${safeMarkdownHTML}</div>
                 </div>
@@ -227,21 +217,20 @@ async function fetchMessages() {
     } catch (err) { console.error("Error loading chat"); }
 }
 
-// Menangani klik Enter untuk Kirim pesan (Shift+Enter untuk baris baru)
 const chatTextarea = document.getElementById('content');
 chatTextarea.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault(); 
-        document.getElementById('send-btn').click(); // Panggil tombol kirim
+        document.getElementById('send-btn').click(); 
     }
 });
 
 document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const content = chatTextarea.value.trim(); // Hindari kirim pesan kosong
+    const content = chatTextarea.value.trim();
     if(!content) return;
     
-    chatTextarea.value = ''; // Kosongkan input segera
+    chatTextarea.value = '';
     
     await fetch('/api/messages', {
         method: 'POST',
