@@ -12,16 +12,42 @@ export async function onRequestPost(context) {
         return new Response(JSON.stringify({ error: "Username sudah terdaftar" }), { status: 400 });
     }
 
-    // Hash Password menggunakan Web Crypto API (SHA-256)
     const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashedPassword = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    // 1. Buat Salt acak (16 bytes)
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    
+    // 2. Siapkan material kunci dari password
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw", 
+        encoder.encode(password), 
+        { name: "PBKDF2" }, 
+        false, 
+        ["deriveBits"]
+    );
 
-    // Simpan ke D1
+    // 3. Proses Hashing dengan PBKDF2 (SHA-256, 100.000 iterasi)
+    const hashBuffer = await crypto.subtle.deriveBits(
+        { 
+            name: "PBKDF2", 
+            salt: salt, 
+            iterations: 100000, 
+            hash: "SHA-256" 
+        },
+        keyMaterial, 
+        256 // Panjang hash yang dihasilkan (dalam bit)
+    );
+
+    // 4. Ubah Salt dan Hash ke format Hexadecimal (Teks biasa)
+    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+    const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    // 5. Gabungkan menjadi satu string dengan pemisah titik dua (:)
+    const storedPassword = `${saltHex}:${hashHex}`;
+
+    // 6. Simpan ke D1
     await env.DB.prepare("INSERT INTO users (username, password) VALUES (?, ?)")
-        .bind(username, hashedPassword).run();
+        .bind(username, storedPassword).run();
 
     return new Response(JSON.stringify({ success: true }), {
         headers: { "Content-Type": "application/json" }
