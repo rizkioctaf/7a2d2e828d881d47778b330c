@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare D1 Chat (Full Features)</title>
+    <title>Cloudflare D1 Chat</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
@@ -21,18 +21,22 @@
         #chat-container, #settings-container { display: none; }
         
         #chat-container { display: flex; flex-direction: column; height: 80vh; max-height: 700px; padding: 15px;}
-        #chat-box { flex-grow: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
+        #chat-box { flex-grow: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 10px; border-bottom: 1px solid #ddd; text-align: left; scroll-behavior: smooth;}
         
-        .message { margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
-        .message:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
+        .message { margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding: 5px 10px; border-radius: 6px; transition: background-color 0.5s; }
+        .message:last-child { border-bottom: none; margin-bottom: 0;}
         .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
         
-        /* Tombol Balas (Reply) */
+        /* Efek Animasi Target Reply */
+        .highlight-msg { animation: highlightAnim 2.5s ease-out; }
+        @keyframes highlightAnim { 0% { background-color: #d2e3fc; } 100% { background-color: transparent; } }
+        
         .btn-reply { font-size: 11px; cursor: pointer; color: #0051c3; background: none; border: none; padding: 0; margin-left: auto; text-transform: uppercase; font-weight: bold;}
         .btn-reply:hover { text-decoration: underline; }
         
-        /* Gaya Blok Pesan yang dibalas */
-        .reply-block { font-size: 12px; background: #f8f9fa; border-left: 3px solid #ccc; padding: 6px 10px; margin-bottom: 8px; color: #555; border-radius: 4px; }
+        /* Blok Balasan yang bisa diklik */
+        .reply-block { font-size: 12px; background: #f8f9fa; border-left: 3px solid #ccc; padding: 6px 10px; margin-bottom: 8px; color: #555; border-radius: 4px; cursor: pointer; transition: 0.2s;}
+        .reply-block:hover { background: #e2e6ea; border-left-color: #0051c3; }
         
         .markdown-body { font-size: 14.5px; line-height: 1.5; color: #333; margin-top: 5px; }
         .markdown-body p { margin: 0 0 5px 0; white-space: pre-wrap; }
@@ -41,7 +45,7 @@
         .markdown-body pre { background: #f4f4f4; padding: 10px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #ddd;}
         .markdown-body code { background: #eaeaea; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
         
-        .chat-input-area { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+        .chat-input-area { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; position: relative;}
         .btn-attach { padding: 10px; background: #e0e0e0; color: #333; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
         
         textarea#content { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; resize: none; overflow-y: auto; min-height: 20px; max-height: 120px; line-height: 1.4;}
@@ -54,9 +58,12 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 10px; flex-shrink: 0;}
         .toggle-link { color: #0051c3; cursor: pointer; font-size: 0.9em; margin-top: 10px; display: inline-block; font-weight: 500;}
         #upload-status { font-size: 12px; color: #0051c3; margin-top: 5px; font-weight: bold; display: none; text-align: left; padding-bottom: 5px;}
-        
-        /* Banner saat membalas pesan */
         #reply-banner { display: none; background: #e8f0fe; padding: 8px 12px; border-left: 4px solid #0051c3; font-size: 12px; margin-bottom: 8px; border-radius: 4px; justify-content: space-between; align-items: center; flex-shrink: 0;}
+        
+        /* UI Auto-suggest Mention */
+        #mention-suggestions { display: none; position: absolute; bottom: 100%; left: 45px; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); max-height: 150px; overflow-y: auto; z-index: 10; min-width: 150px; margin-bottom: 5px; padding: 5px 0;}
+        .suggestion-item { padding: 8px 12px; font-size: 14px; cursor: pointer; }
+        .suggestion-item:hover { background: #f0f0f0; color: #0051c3; font-weight: bold;}
     </style>
 </head>
 <body>
@@ -109,7 +116,6 @@
         
         <div id="upload-status">⏳ Mengunggah media...</div>
         
-        <!-- UI Banner saat melakukan Balas (Reply) -->
         <div id="reply-banner">
             <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%;">
                 Membalas <strong><span id="reply-user"></span></strong>: <span id="reply-text"></span>
@@ -118,6 +124,9 @@
         </div>
         
         <form id="chat-form" class="chat-input-area">
+            <!-- Box Saran Mention -->
+            <div id="mention-suggestions"></div>
+            
             <label for="file-input" class="btn-attach" title="Kirim Gambar/Video/Audio">📎</label>
             <input type="file" id="file-input" accept="image/*,video/*,audio/*" style="display: none;">
             <textarea id="content" placeholder="Ketik pesan... (Enter: Kirim | Shift+Enter: Baris Baru)" rows="1" required></textarea>
