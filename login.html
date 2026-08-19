@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><title>Login / Register</title></head>
+<body>
+    <h1>Login atau Buat Akun</h1>
+    <input type="text" id="username" placeholder="Username"><br><br>
+    <input type="password" id="password" placeholder="Password"><br><br>
+    <button onclick="auth('login')">Login</button>
+    <button onclick="auth('register')">Register</button>
+
+    <script>
+        async function auth(action) {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            
+            const res = await fetch(`/api/auth?action=${action}`, {
+                method: 'POST',
+                body: JSON.stringify({username: user, password: pass})
+            });
+
+            if (res.ok) {
+                alert(`${action} sukses!`);
+                if (action === 'login') {
+                    localStorage.setItem('username', user);
+                    window.location.href = 'index.html';
+                }
+            } else {
+                alert("Gagal. Cek kembali data Anda.");
+            }
+        }
+    </script>
+</body>
+</html>

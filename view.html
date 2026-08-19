@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><title>Baca Artikel</title></head>
+<body>
+    <a href="index.html">← Kembali</a>
+    <hr>
+    <div id="article-content">Loading...</div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+
+        fetch(`/api/article?id=${id}`)
+            .then(res => res.json())
+            .then(art => {
+                document.getElementById('article-content').innerHTML = `
+                    <h1>${art.title}</h1>
+                    <p><strong>Kategori:</strong> ${art.category} | <strong>Penulis:</strong> ${art.author}</p>
+                    <hr>
+                    <p style="white-space: pre-wrap;">${art.content}</p>
+                `;
+            });
+    </script>
+</body>
+</html>

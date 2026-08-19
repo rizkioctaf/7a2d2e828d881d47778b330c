@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><title>Tulis Artikel</title></head>
+<body>
+    <h1>Tulis Artikel Baru</h1>
+    <input type="text" id="title" placeholder="Judul Artikel" style="width:100%"><br><br>
+    <input type="text" id="category" placeholder="Kategori (Misal: Teknologi)"><br><br>
+    <textarea id="content" placeholder="Isi artikel lengkap..." rows="10" style="width:100%"></textarea><br><br>
+    <button onclick="submitArticle()">Publish</button>
+
+    <script>
+        const author = localStorage.getItem('username');
+        if (!author) {
+            alert("Anda harus login dulu!");
+            window.location.href = 'login.html';
+        }
+
+        async function submitArticle() {
+            const title = document.getElementById('title').value;
+            const category = document.getElementById('category').value;
+            const content = document.getElementById('content').value;
+
+            await fetch('/api/articles', {
+                method: 'POST',
+                body: JSON.stringify({ title, category, content, author })
+            });
+
+            alert('Artikel berhasil dipublish!');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
