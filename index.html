@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare Chat (Media & Markdown)</title>
+    <title>Cloudflare D1 Chat (Full Features)</title>
     
-    <!-- Library untuk Markdown & Pembersih XSS -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
 
@@ -21,7 +20,6 @@
         .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; margin-bottom: 15px;}
         #chat-container, #settings-container { display: none; }
         
-        /* Layout Chat dengan Flexbox (Agar tidak memanjang tak terhingga) */
         #chat-container { display: flex; flex-direction: column; height: 80vh; max-height: 700px; padding: 15px;}
         #chat-box { flex-grow: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; border-bottom: 1px solid #ddd; text-align: left; }
         
@@ -29,7 +27,13 @@
         .message:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
         .meta { font-size: 0.75em; color: #888; margin-left: 8px; }
         
-        /* Gaya Markdown & Media */
+        /* Tombol Balas (Reply) */
+        .btn-reply { font-size: 11px; cursor: pointer; color: #0051c3; background: none; border: none; padding: 0; margin-left: auto; text-transform: uppercase; font-weight: bold;}
+        .btn-reply:hover { text-decoration: underline; }
+        
+        /* Gaya Blok Pesan yang dibalas */
+        .reply-block { font-size: 12px; background: #f8f9fa; border-left: 3px solid #ccc; padding: 6px 10px; margin-bottom: 8px; color: #555; border-radius: 4px; }
+        
         .markdown-body { font-size: 14.5px; line-height: 1.5; color: #333; margin-top: 5px; }
         .markdown-body p { margin: 0 0 5px 0; white-space: pre-wrap; }
         .markdown-body img, .markdown-body video { max-width: 100%; border-radius: 8px; margin-top: 5px; background: #000; }
@@ -37,31 +41,28 @@
         .markdown-body pre { background: #f4f4f4; padding: 10px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #ddd;}
         .markdown-body code { background: #eaeaea; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
         
-        /* Input Teks & Attachment */
         .chat-input-area { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
         .btn-attach { padding: 10px; background: #e0e0e0; color: #333; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
-        .btn-attach:hover { background: #ccc; }
         
         textarea#content { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; resize: none; overflow-y: auto; min-height: 20px; max-height: 120px; line-height: 1.4;}
-        
         input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 14px;}
         button { padding: 10px 15px; background: #0051c3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; white-space: nowrap;}
-        button:hover { background: #003682; }
+        button:hover { opacity: 0.9; }
         .btn-danger { background: #d93025; }
-        .btn-danger:hover { background: #b3261e; }
         .btn-secondary { background: #5f6368; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 10px; flex-shrink: 0;}
         .toggle-link { color: #0051c3; cursor: pointer; font-size: 0.9em; margin-top: 10px; display: inline-block; font-weight: 500;}
+        #upload-status { font-size: 12px; color: #0051c3; margin-top: 5px; font-weight: bold; display: none; text-align: left; padding-bottom: 5px;}
         
-        #upload-status { font-size: 12px; color: #0051c3; margin-top: 5px; font-weight: bold; display: none; text-align: left;}
+        /* Banner saat membalas pesan */
+        #reply-banner { display: none; background: #e8f0fe; padding: 8px 12px; border-left: 4px solid #0051c3; font-size: 12px; margin-bottom: 8px; border-radius: 4px; justify-content: space-between; align-items: center; flex-shrink: 0;}
     </style>
 </head>
 <body>
 
     <div id="notification"></div>
 
-    <!-- WADAH AUTH & SETTINGS (Sama seperti sebelumnya) -->
     <div id="auth-container" class="box">
         <h2 id="auth-title">Login ke Chat</h2>
         <form id="auth-form" class="auth-form">
@@ -80,13 +81,21 @@
             <h3 style="margin: 0;">Pengaturan</h3>
             <button class="btn-secondary" onclick="closeSettings()">Kembali</button>
         </div>
-        <form id="edit-username-form" style="margin: 15px 0;"><input type="text" id="new-username" placeholder="Username Baru" required style="margin-bottom: 5px;"><button type="submit" style="width:100%;">Simpan Username</button></form>
-        <form id="change-password-form"><input type="password" id="old-password" placeholder="Password Lama" required style="margin-bottom: 5px;"><input type="password" id="new-password" placeholder="Password Baru" required style="margin-bottom: 5px;"><button type="submit" style="width:100%;">Ubah Password</button></form>
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+        <h4 style="text-align: left; margin: 15px 0 5px 0;">Ganti Username</h4>
+        <form id="edit-username-form" style="display: flex; gap: 8px;">
+            <input type="text" id="new-username" placeholder="Username Baru" required>
+            <button type="submit">Simpan</button>
+        </form>
+        <h4 style="text-align: left; margin: 15px 0 5px 0;">Ganti Password</h4>
+        <form id="change-password-form" class="auth-form" style="margin-top: 0;">
+            <input type="password" id="old-password" placeholder="Password Lama" required>
+            <input type="password" id="new-password" placeholder="Password Baru" required>
+            <button type="submit">Ubah Password</button>
+        </form>
+        <hr style="border: 0; border-top: 1px solid #ddd; margin: 25px 0;">
         <button class="btn-danger" onclick="deleteAccount()" style="width: 100%;">Hapus Akun Permanen</button>
     </div>
 
-    <!-- AREA CHAT (Dengan Media & Multiline) -->
     <div id="chat-container" class="box">
         <div class="header">
             <h3 style="margin: 0;">Halo, <span id="user-display"></span>!</h3>
@@ -100,13 +109,18 @@
         
         <div id="upload-status">⏳ Mengunggah media...</div>
         
-        <!-- Form Multiline & Upload -->
+        <!-- UI Banner saat melakukan Balas (Reply) -->
+        <div id="reply-banner">
+            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%;">
+                Membalas <strong><span id="reply-user"></span></strong>: <span id="reply-text"></span>
+            </div>
+            <button type="button" onclick="cancelReply()" style="background: none; border: none; color: #d93025; font-weight: bold; cursor: pointer; padding: 0 5px; font-size: 14px;">X</button>
+        </div>
+        
         <form id="chat-form" class="chat-input-area">
-            <!-- Tombol Pilih File -->
             <label for="file-input" class="btn-attach" title="Kirim Gambar/Video/Audio">📎</label>
             <input type="file" id="file-input" accept="image/*,video/*,audio/*" style="display: none;">
-            
-            <textarea id="content" placeholder="Ketik pesan... (Shift+Enter untuk baris baru)" rows="1" required></textarea>
+            <textarea id="content" placeholder="Ketik pesan... (Enter: Kirim | Shift+Enter: Baris Baru)" rows="1" required></textarea>
             <button type="submit" id="send-btn">Kirim</button>
         </form>
     </div>

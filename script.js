@@ -13,29 +13,20 @@ const uploadStatus = document.getElementById('upload-status');
 // ==========================================
 // STATE APLIKASI
 // ==========================================
-let mode = 'login'; // Pilihan: 'login', 'register', 'reset'
+let mode = 'login'; 
 let currentUser = localStorage.getItem('username');
 let chatInterval;
 let notifTimeout;
 let lastMessageId = 0; 
+let replyingToId = null; // Menyimpan ID pesan yang sedang dibalas
 
 // Konfigurasi Markdown (agar baris baru otomatis jadi <br>)
-if (typeof marked !== 'undefined') {
-    marked.setOptions({ breaks: true });
-}
+if (typeof marked !== 'undefined') marked.setOptions({ breaks: true });
 
 // Tambahkan CSS Dinamis untuk fitur Mention (@User)
 const mentionStyle = document.createElement('style');
 mentionStyle.innerHTML = `
-    .mention { 
-        color: #0051c3; 
-        font-weight: bold; 
-        background: #e8f0fe; 
-        padding: 2px 4px; 
-        border-radius: 4px; 
-        cursor: pointer;
-        transition: background 0.2s;
-    }
+    .mention { color: #0051c3; font-weight: bold; background: #e8f0fe; padding: 2px 4px; border-radius: 4px; cursor: pointer; transition: background 0.2s;} 
     .mention:hover { background: #d2e3fc; }
 `;
 document.head.appendChild(mentionStyle);
@@ -52,11 +43,7 @@ if (currentUser) showChat();
 function escapeHTML(str) {
     if (!str) return "";
     return str.replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        "'": '&#39;',
-        '"': '&quot;'
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
     }[tag] || tag));
 }
 
@@ -73,6 +60,30 @@ function showNotification(msg, type = 'error') {
     
     clearTimeout(notifTimeout);
     notifTimeout = setTimeout(() => notification.style.display = 'none', 4000);
+}
+
+
+// ==========================================
+// FUNGSI REPLY (BALAS PESAN)
+// ==========================================
+
+function setReply(id, sender, content) {
+    replyingToId = id;
+    document.getElementById('reply-banner').style.display = 'flex';
+    document.getElementById('reply-user').innerText = '@' + sender;
+    
+    // Hilangkan sintaks markdown untuk preview (tampilan simpel di banner balasan)
+    let plainText = decodeURIComponent(content).replace(/[*_~`>#]/g, '').replace(/\n/g, ' ');
+    if (plainText.length > 50) plainText = plainText.substring(0, 50) + '...';
+    document.getElementById('reply-text').innerText = plainText;
+    
+    chatTextarea.focus();
+}
+
+// Fungsi Batal Reply (dibuat global agar bisa diakses onClick dari HTML)
+window.cancelReply = function() {
+    replyingToId = null;
+    document.getElementById('reply-banner').style.display = 'none';
 }
 
 
@@ -103,35 +114,17 @@ function updateAuthUI() {
     const usrInput = document.getElementById('username');
     
     if (mode === 'login') {
-        authTitle.innerText = "Login ke Chat"; 
-        authBtn.innerText = "Masuk"; 
-        pwdInput.placeholder = "Password"; 
-        usrInput.placeholder = "Username";
-        valCode.style.display = 'none'; 
-        resetCode.style.display = 'none';
-        toggleAuth.innerText = "Belum punya akun? Daftar disini"; 
-        toggleAuth.style.display = 'inline-block'; 
-        toggleReset.style.display = 'inline-block';
+        authTitle.innerText = "Login ke Chat"; authBtn.innerText = "Masuk"; pwdInput.placeholder = "Password"; usrInput.placeholder = "Username";
+        valCode.style.display = 'none'; resetCode.style.display = 'none';
+        toggleAuth.innerText = "Belum punya akun? Daftar disini"; toggleAuth.style.display = 'inline-block'; toggleReset.style.display = 'inline-block';
     } else if (mode === 'register') {
-        authTitle.innerText = "Daftar Akun Baru"; 
-        authBtn.innerText = "Daftar"; 
-        pwdInput.placeholder = "Buat Password Baru"; 
-        usrInput.placeholder = "Username (Hanya Huruf & Angka)";
-        valCode.style.display = 'block'; 
-        resetCode.style.display = 'none';
-        toggleAuth.innerText = "Sudah punya akun? Login disini"; 
-        toggleAuth.style.display = 'inline-block'; 
-        toggleReset.style.display = 'none';
+        authTitle.innerText = "Daftar Akun Baru"; authBtn.innerText = "Daftar"; pwdInput.placeholder = "Buat Password Baru"; usrInput.placeholder = "Username (Hanya Huruf & Angka)";
+        valCode.style.display = 'block'; resetCode.style.display = 'none';
+        toggleAuth.innerText = "Sudah punya akun? Login disini"; toggleAuth.style.display = 'inline-block'; toggleReset.style.display = 'none';
     } else if (mode === 'reset') {
-        authTitle.innerText = "Reset Password"; 
-        authBtn.innerText = "Simpan Password Baru"; 
-        pwdInput.placeholder = "Masukkan Password Baru"; 
-        usrInput.placeholder = "Username Akun Anda";
-        valCode.style.display = 'none'; 
-        resetCode.style.display = 'block';
-        toggleAuth.innerText = "Batal / Kembali ke Login"; 
-        toggleAuth.style.display = 'inline-block'; 
-        toggleReset.style.display = 'none';
+        authTitle.innerText = "Reset Password"; authBtn.innerText = "Simpan Password Baru"; pwdInput.placeholder = "Masukkan Password Baru"; usrInput.placeholder = "Username Akun Anda";
+        valCode.style.display = 'none'; resetCode.style.display = 'block';
+        toggleAuth.innerText = "Batal / Kembali ke Login"; toggleAuth.style.display = 'inline-block'; toggleReset.style.display = 'none';
     }
 }
 
@@ -146,8 +139,7 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
         return showNotification("Gagal: Username hanya huruf dan angka!", "error");
     }
     
-    authBtn.innerText = "Tunggu..."; 
-    authBtn.disabled = true;
+    authBtn.innerText = "Tunggu..."; authBtn.disabled = true;
 
     let endpoint = '/api/auth/login'; 
     let payload = { username, password };
@@ -285,9 +277,7 @@ async function deleteAccount() {
             } else {
                 showNotification("Gagal hapus akun.", "error");
             }
-        } catch (err) {
-            showNotification("Kesalahan jaringan.", "error");
-        }
+        } catch (err) { showNotification("Kesalahan jaringan.", "error"); }
     }
 }
 
@@ -346,13 +336,21 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
 
 
 // ==========================================
-// LOGIKA CHAT, DATABASE POLLING & MENTION
+// LOGIKA CHAT (RENDER, MENTION, & REPLY)
 // ==========================================
 
 // Fitur auto-resize tinggi Textarea saat mengetik
 chatTextarea.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
+});
+
+// Shortcut Keyboard Textarea (Enter: Kirim, Shift+Enter: Baris Baru)
+chatTextarea.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); 
+        document.getElementById('send-btn').click();
+    }
 });
 
 // Menarik dan me-render Pesan (Delta Fetch / Hemat Database)
@@ -392,11 +390,31 @@ async function fetchMessages(isInitialLoad = false) {
             const div = document.createElement('div');
             div.className = 'message';
             
+            // 4. Merender Blok Balasan (Jika pesan ini adalah reply)
+            let replyHTML = '';
+            if (msg.reply_to && msg.reply_sender) {
+                // Bersihkan Markdown dari pesan asli untuk dipreview
+                let safeReplyContent = escapeHTML(msg.reply_content).replace(/<[^>]*>?/gm, ''); 
+                if (safeReplyContent.length > 70) safeReplyContent = safeReplyContent.substring(0, 70) + '...';
+                
+                replyHTML = `
+                    <div class="reply-block">
+                        <strong>@${escapeHTML(msg.reply_sender)}</strong>: ${safeReplyContent}
+                    </div>
+                `;
+            }
+            
+            // Encode content untuk disimpan di atribut tombol tanpa merusak HTML
+            const encodedContent = encodeURIComponent(msg.content);
+
+            // 5. Tampilkan Pesan ke DOM
             div.innerHTML = `
-                <div style="margin-bottom: 2px;">
-                    <strong>${escapeHTML(msg.sender)}</strong> <span class="meta">${time}</span>
+                <div style="margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                    <div><strong>${escapeHTML(msg.sender)}</strong> <span class="meta">${time}</span></div>
+                    <button class="btn-reply" data-id="${msg.id}" data-sender="${escapeHTML(msg.sender)}" data-content="${encodedContent}">Balas</button>
                 </div>
-                <div class="markdown-body" style="margin-top: 4px;">${safeMarkdownHTML}</div>
+                ${replyHTML}
+                <div class="markdown-body">${safeMarkdownHTML}</div>
             `;
             chatBox.appendChild(div);
             
@@ -411,13 +429,22 @@ async function fetchMessages(isInitialLoad = false) {
     }
 }
 
-// EVENT DELEGATION: Jika pengguna mengklik tag @Mention di chatbox
+// EVENT DELEGATION: Jika pengguna mengklik tag @Mention atau tombol Balas di chatbox
 chatBox.addEventListener('click', (e) => {
+    // Aksi Klik Tag @Mention
     if (e.target.classList.contains('mention')) {
         const usernameTag = e.target.innerText;
         chatTextarea.value += usernameTag + ' '; // Masukkan tag ke area input
         chatTextarea.dispatchEvent(new Event('input')); // Auto-resize
         chatTextarea.focus();
+    }
+    
+    // Aksi Klik Tombol Balas (Reply)
+    if (e.target.classList.contains('btn-reply')) {
+        const id = e.target.getAttribute('data-id');
+        const sender = e.target.getAttribute('data-sender');
+        const content = e.target.getAttribute('data-content');
+        setReply(id, sender, content);
     }
 });
 
@@ -427,15 +454,23 @@ document.getElementById('chat-form').addEventListener('submit', async (e) => {
     const content = chatTextarea.value.trim();
     if(!content) return;
     
+    // Simpan status reply sebelum mereset form
+    const sendReplyId = replyingToId;
+    
     // Reset Form Input
     chatTextarea.value = '';
     chatTextarea.style.height = 'auto';
+    window.cancelReply(); // Sembunyikan banner reply
     
     // Post Pesan ke Database
     await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: currentUser, content })
+        body: JSON.stringify({ 
+            sender: currentUser, 
+            content: content,
+            reply_to: sendReplyId 
+        })
     });
     
     // Tarik pesan terbaru segera secara manual

@@ -5,58 +5,44 @@ export async function onRequestGet(context) {
     const url = new URL(request.url);
     const lastId = url.searchParams.get('lastId');
 
-    if (lastId) {
-        const { results } = await env.DB.prepare("SELECT * FROM messages WHERE id > ? ORDER BY id ASC").bind(lastId).all();
-        return new Response(JSON.stringify(results), { headers: { "Content-Type": "application/json" } });
-    } else {
-        const { results } = await env.DB.prepare("SELECT * FROM messages ORDER BY timestamp DESC LIMIT 50").all();
-        return new Response(JSON.stringify(results), { headers: { "Content-Type": "application/json" } });
-    }
+    // Menggunakan LEFT JOIN agar kita bisa mendapatkan nama dan isi pesan yang dibalas
+    const query = `
+        SELECT m.*, r.sender as reply_sender, r.content as reply_content 
+        FROM messages m 
+        LEFT JOIN messages r ON m.reply_to = r.id 
+        ${lastId ? 'WHERE m.id > ?' : ''} 
+        ORDER BY m.id ${lastId ? 'ASC' : 'DESC LIMIT 50'}
+    `;
+
+    const stmt = lastId ? env.DB.prepare(query).bind(lastId) : env.DB.prepare(query);
+    const { results } = await stmt.all();
+
+    return new Response(JSON.stringify(results), { headers: { "Content-Type": "application/json" } });
 }
 
 export async function onRequestPost(context) {
     const { request, env, waitUntil } = context;
-    const { sender, content } = await request.json();
+    const { sender, content, reply_to } = await request.json();
 
-    if (!sender || !content) {
-        return new Response("Nama dan pesan wajib diisi", { status: 400 });
-    }
+    if (!sender || !content) return new Response("Error", { status: 400 });
 
-    // 1. Simpan pesan baru ke D1
-    await env.DB.prepare("INSERT INTO messages (sender, content) VALUES (?, ?)").bind(sender, content).run();
+    // Menyimpan pesan beserta ID pesan yang dibalas (jika ada)
+    await env.DB.prepare("INSERT INTO messages (sender, content, reply_to) VALUES (?, ?, ?)")
+        .bind(sender, content, reply_to || null).run();
 
-    // 2. BACKGROUND TASK: BACKUP & HAPUS PESAN > 30 HARI
-    // waitUntil() membuat proses ini berjalan di latar belakang tanpa membuat pengguna menunggu (Loading).
+    // BACKGROUND TASK: BACKUP & HAPUS PESAN > 30 HARI
     waitUntil(async function() {
         try {
-            // Cari pesan yang umurnya lebih dari 30 hari
-            const oldMessages = await env.DB.prepare(
-                "SELECT * FROM messages WHERE timestamp <= datetime('now', '-30 day')"
-            ).all();
-            
+            const oldMessages = await env.DB.prepare("SELECT * FROM messages WHERE timestamp <= datetime('now', '-30 day')").all();
             if (oldMessages.results && oldMessages.results.length > 0) {
-                // Ubah data menjadi file JSON
                 const backupData = JSON.stringify(oldMessages.results, null, 2);
                 const backupFilename = `backups/chat-backup-${Date.now()}.json`;
                 
-                // Simpan File JSON tersebut ke R2 (Bucket MEDIA_BUCKET)
-                await env.MEDIA_BUCKET.put(backupFilename, backupData, {
-                    httpMetadata: { contentType: "application/json" }
-                });
-                
-                // Hapus pesan-pesan tersebut dari Database D1
-                await env.DB.prepare(
-                    "DELETE FROM messages WHERE timestamp <= datetime('now', '-30 day')"
-                ).run();
-                
-                console.log(`Backup berhasil: ${oldMessages.results.length} pesan dipindahkan ke R2.`);
+                await env.MEDIA_BUCKET.put(backupFilename, backupData, { httpMetadata: { contentType: "application/json" } });
+                await env.DB.prepare("DELETE FROM messages WHERE timestamp <= datetime('now', '-30 day')").run();
             }
-        } catch (e) {
-            console.error("Gagal melakukan backup latar belakang", e);
-        }
+        } catch (e) { console.error("Backup error", e); }
     }());
 
-    return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" }
-    });
+    return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
 }
