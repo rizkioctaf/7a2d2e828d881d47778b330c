@@ -1,8 +1,17 @@
 <!DOCTYPE html>
 <html>
-<head><title>Login / Register</title></head>
+<head>
+    <title>Login / Register</title>
+    <script>
+        // Jika sudah login, langsung pindahkan ke halaman utama (index)
+        if (localStorage.getItem('username')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</head>
 <body>
     <h1>Login atau Buat Akun</h1>
+    <p>Anda wajib login untuk mengakses website ini.</p>
     <input type="text" id="username" placeholder="Username"><br><br>
     <input type="password" id="password" placeholder="Password"><br><br>
     <button onclick="auth('login')">Login</button>
@@ -13,19 +22,25 @@
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
             
+            if(!user || !pass) {
+                alert("Username dan Password tidak boleh kosong!");
+                return;
+            }
+            
             const res = await fetch(`/api/auth?action=${action}`, {
                 method: 'POST',
                 body: JSON.stringify({username: user, password: pass})
             });
 
             if (res.ok) {
-                alert(`${action} sukses!`);
                 if (action === 'login') {
                     localStorage.setItem('username', user);
-                    window.location.href = 'index.html';
+                    window.location.href = 'index.html'; // Sukses login, masuk ke index
+                } else {
+                    alert('Register sukses! Silakan klik Login untuk masuk.');
                 }
             } else {
-                alert("Gagal. Cek kembali data Anda.");
+                alert("Gagal. Pastikan username/password benar atau username belum dipakai.");
             }
         }
     </script>

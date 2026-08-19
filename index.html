@@ -1,59 +1,56 @@
 <!DOCTYPE html>
 <html>
-<head><title>Web Artikel</title></head>
+<head>
+    <title>Web Artikel - Home</title>
+    <script>
+        // PROTEKSI: Jika tidak ada data login, langsung lempar ke login.html
+        const currentUser = localStorage.getItem('username');
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
 <body>
     <h1>Daftar Artikel</h1>
     <nav>
-        <span id="auth-links"><a href="login.html">Login / Register</a></span>
-        <span id="user-menu" style="display:none;">
-            Halo, <strong id="user-name"></strong> | 
-            <a href="write.html">Tulis Artikel</a> | 
-            <button onclick="logout()">Logout</button>
-        </span>
+        Halo, <strong id="user-name"></strong> | 
+        <a href="write.html">Tulis Artikel</a> | 
+        <button onclick="logout()">Logout</button>
     </nav>
     <hr>
-    <div id="articles">Loading...</div>
+    <div id="articles">Memuat data...</div>
 
     <script>
-        // Cek login status
-        const currentUser = localStorage.getItem('username');
-        if(currentUser) {
-            document.getElementById('auth-links').style.display = 'none';
-            document.getElementById('user-menu').style.display = 'inline';
-            document.getElementById('user-name').innerText = currentUser;
-        }
+        // Tampilkan nama user
+        document.getElementById('user-name').innerText = currentUser;
 
+        // Fungsi Logout
         function logout() {
             localStorage.removeItem('username');
-            window.location.reload(); // Refresh halaman setelah logout
+            window.location.href = 'login.html'; // Setelah logout, tendang ke login
         }
 
-        // Ambil data artikel (tanpa preview)
+        // Ambil data artikel (hanya berjalan jika sudah login)
         fetch('/api/articles')
             .then(res => res.json())
             .then(data => {
                 const container = document.getElementById('articles');
                 container.innerHTML = '';
+                
+                if(data.length === 0) {
+                    container.innerHTML = '<p>Belum ada artikel.</p>';
+                    return;
+                }
+
                 data.forEach(art => {
                     container.innerHTML += `
                         <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-                            <h2><a href="view.html?id=${art.id}" onclick="return checkLogin(event)">${art.title}</a></h2>
+                            <h2><a href="view.html?id=${art.id}">${art.title}</a></h2>
                             <p><strong>Kategori:</strong> ${art.category} | <strong>Penulis:</strong> ${art.author}</p>
                         </div>
                     `;
                 });
             });
-
-        // Fungsi memblokir klik judul jika belum login
-        function checkLogin(event) {
-            if (!localStorage.getItem('username')) {
-                event.preventDefault(); // Mencegah pindah ke halaman view
-                alert("Anda harus login terlebih dahulu untuk membaca artikel ini!");
-                window.location.href = 'login.html';
-                return false;
-            }
-            return true;
-        }
     </script>
 </body>
 </html>

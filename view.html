@@ -1,36 +1,37 @@
 <!DOCTYPE html>
 <html>
-<head><title>Baca Artikel</title></head>
+<head>
+    <title>Baca Artikel</title>
+    <script>
+        // PROTEKSI: Lempar ke login jika belum masuk
+        if (!localStorage.getItem('username')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
 <body>
-    <a href="index.html">← Kembali</a>
+    <a href="index.html">← Kembali ke Beranda</a>
     <hr>
     <div id="article-content">Memuat artikel...</div>
 
     <script>
-        // PROTEKSI: Cek apakah user sudah login
-        if (!localStorage.getItem('username')) {
-            alert("Akses ditolak! Anda harus login untuk membaca keseluruhan artikel.");
-            window.location.href = 'login.html';
-        } else {
-            // Jika sudah login, tampilkan artikel
-            const params = new URLSearchParams(window.location.search);
-            const id = params.get('id');
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
 
-            fetch(`/api/article?id=${id}`)
-                .then(res => res.json())
-                .then(art => {
-                    if(art) {
-                        document.getElementById('article-content').innerHTML = `
-                            <h1>${art.title}</h1>
-                            <p><strong>Kategori:</strong> ${art.category} | <strong>Penulis:</strong> ${art.author}</p>
-                            <hr>
-                            <p style="white-space: pre-wrap;">${art.content}</p>
-                        `;
-                    } else {
-                        document.getElementById('article-content').innerHTML = "<p>Artikel tidak ditemukan.</p>";
-                    }
-                });
-        }
+        fetch(`/api/article?id=${id}`)
+            .then(res => res.json())
+            .then(art => {
+                if(art) {
+                    document.getElementById('article-content').innerHTML = `
+                        <h1>${art.title}</h1>
+                        <p><strong>Kategori:</strong> ${art.category} | <strong>Penulis:</strong> ${art.author}</p>
+                        <hr>
+                        <p style="white-space: pre-wrap;">${art.content}</p>
+                    `;
+                } else {
+                    document.getElementById('article-content').innerHTML = "<p>Artikel tidak ditemukan.</p>";
+                }
+            });
     </script>
 </body>
 </html>
