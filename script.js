@@ -1,4 +1,6 @@
-// --- DEKLARASI ELEMEN DOM ---
+// ==========================================
+// DEKLARASI ELEMEN DOM
+// ==========================================
 const authContainer = document.getElementById('auth-container');
 const chatContainer = document.getElementById('chat-container');
 const settingsContainer = document.getElementById('settings-container');
@@ -8,18 +10,21 @@ const notification = document.getElementById('notification');
 const chatTextarea = document.getElementById('content');
 const uploadStatus = document.getElementById('upload-status');
 
-// --- STATE APLIKASI ---
+// ==========================================
+// STATE APLIKASI
+// ==========================================
 let mode = 'login'; // Pilihan: 'login', 'register', 'reset'
 let currentUser = localStorage.getItem('username');
 let chatInterval;
 let notifTimeout;
-let lastMessageId = 0;
+let lastMessageId = 0; 
 
 // Konfigurasi Markdown (agar baris baru otomatis jadi <br>)
-marked.setOptions({ breaks: true });
+if (typeof marked !== 'undefined') {
+    marked.setOptions({ breaks: true });
+}
 
-// --- CSS DINAMIS UNTUK FITUR MENTION (@User) ---
-// Kita tambahkan CSS langsung dari script agar kamu tidak perlu edit index.html
+// Tambahkan CSS Dinamis untuk fitur Mention (@User)
 const mentionStyle = document.createElement('style');
 mentionStyle.innerHTML = `
     .mention { 
@@ -29,6 +34,7 @@ mentionStyle.innerHTML = `
         padding: 2px 4px; 
         border-radius: 4px; 
         cursor: pointer;
+        transition: background 0.2s;
     }
     .mention:hover { background: #d2e3fc; }
 `;
@@ -171,6 +177,8 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
             } else { 
                 showNotification(mode === 'reset' ? "Password direset!" : "Pendaftaran berhasil!", "success"); 
                 document.getElementById('password').value = ''; 
+                document.getElementById('validation-code').value = '';
+                document.getElementById('reset-code').value = '';
                 mode = 'login'; 
                 updateAuthUI(); 
             }
@@ -195,8 +203,9 @@ function showChat() {
     settingsContainer.style.display = 'none'; 
     chatContainer.style.display = 'flex'; 
     userDisplay.innerText = currentUser; 
-    fetchMessages(); 
-    chatInterval = setInterval(fetchMessages, 3000); 
+    
+    fetchMessages(true); // Initial load
+    chatInterval = setInterval(() => fetchMessages(false), 3000); // Polling (Delta fetch)
 }
 function openSettings() { 
     clearInterval(chatInterval); 
@@ -264,16 +273,20 @@ document.getElementById('change-password-form').addEventListener('submit', async
 
 async function deleteAccount() {
     if (confirm("Yakin hapus akun secara permanen?")) {
-        const res = await fetch('/api/auth/delete', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ username: currentUser }) 
-        });
-        if (res.ok) { 
-            alert("Akun terhapus."); 
-            logout(); 
-        } else {
-            showNotification("Gagal hapus akun.", "error");
+        try {
+            const res = await fetch('/api/auth/delete', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ username: currentUser }) 
+            });
+            if (res.ok) { 
+                alert("Akun terhapus."); 
+                logout(); 
+            } else {
+                showNotification("Gagal hapus akun.", "error");
+            }
+        } catch (err) {
+            showNotification("Kesalahan jaringan.", "error");
         }
     }
 }
@@ -333,7 +346,7 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
 
 
 // ==========================================
-// LOGIKA CHAT, TEXTAREA MULTILINE & MARKDOWN
+// LOGIKA CHAT, DATABASE POLLING & MENTION
 // ==========================================
 
 // Fitur auto-resize tinggi Textarea saat mengetik
@@ -342,39 +355,40 @@ chatTextarea.addEventListener('input', function() {
     this.style.height = (this.scrollHeight) + 'px';
 });
 
-// Shortcut Keyboard Textarea (Enter: Kirim, Shift+Enter: Baris Baru)
-chatTextarea.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault(); 
-        document.getElementById('send-btn').click();
-    }
-});
-
-// Menarik dan me-render Pesan
-async function fetchMessages() {
+// Menarik dan me-render Pesan (Delta Fetch / Hemat Database)
+async function fetchMessages(isInitialLoad = false) {
     try {
-        const res = await fetch('/api/messages');
+        const endpoint = isInitialLoad ? '/api/messages' : `/api/messages?lastId=${lastMessageId}`;
+        const res = await fetch(endpoint);
         const messages = await res.json();
-        chatBox.innerHTML = '';
         
-        messages.reverse().forEach(msg => {
+        if (messages.length === 0) return; // Abaikan jika tidak ada pesan baru
+
+        if (isInitialLoad) {
+            chatBox.innerHTML = ''; 
+            messages.reverse(); // Dibalik karena initial load me-return DESC
+        }
+        
+        messages.forEach(msg => {
             // Waktu dalam WIB
             const time = new Date(msg.timestamp + 'Z').toLocaleString('id-ID', { 
                 timeZone: 'Asia/Jakarta', 
                 year: 'numeric', month: '2-digit', day: '2-digit', 
                 hour: '2-digit', minute: '2-digit', second: '2-digit' 
-            });
+            }) + ' WIB';
             
             // 1. Markdown Parsing
-            const rawHTML = marked.parse(msg.content);
+            let rawHTML = marked.parse(msg.content);
             
-            // 2. DOMPurify (Melindungi XSS tapi mengizinkan tag Media)
-            const safeMarkdownHTML = DOMPurify.sanitize(rawHTML, {
-                ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'img', 'video', 'audio', 'source'],
-                ALLOWED_ATTR: ['href', 'src', 'controls', 'type', 'preload', 'alt']
+            // 2. DOMPurify perlindungan XSS (Mengizinkan class untuk Mention dan tag Media)
+            let safeMarkdownHTML = DOMPurify.sanitize(rawHTML, {
+                ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'img', 'video', 'audio', 'source', 'span'],
+                ALLOWED_ATTR: ['href', 'src', 'controls', 'type', 'preload', 'alt', 'class']
             });
 
-            // 3. Merender Div Pesan (Desain bersih tanpa avatar)
+            // 3. Regex Mention: Ubah @username menjadi tag span yang memiliki style highlight
+            safeMarkdownHTML = safeMarkdownHTML.replace(/@([a-zA-Z0-9]+)/g, '<span class="mention">@$1</span>');
+
             const div = document.createElement('div');
             div.className = 'message';
             
@@ -382,15 +396,32 @@ async function fetchMessages() {
                 <div style="margin-bottom: 2px;">
                     <strong>${escapeHTML(msg.sender)}</strong> <span class="meta">${time}</span>
                 </div>
-                <div class="markdown-body">${safeMarkdownHTML}</div>
+                <div class="markdown-body" style="margin-top: 4px;">${safeMarkdownHTML}</div>
             `;
             chatBox.appendChild(div);
+            
+            if (msg.id > lastMessageId) {
+                lastMessageId = msg.id;
+            }
         });
+        
         chatBox.scrollTop = chatBox.scrollHeight;
-    } catch (err) { console.error("Error loading chat"); }
+    } catch (err) { 
+        console.error("Error loading chat"); 
+    }
 }
 
-// Mengirim Pesan
+// EVENT DELEGATION: Jika pengguna mengklik tag @Mention di chatbox
+chatBox.addEventListener('click', (e) => {
+    if (e.target.classList.contains('mention')) {
+        const usernameTag = e.target.innerText;
+        chatTextarea.value += usernameTag + ' '; // Masukkan tag ke area input
+        chatTextarea.dispatchEvent(new Event('input')); // Auto-resize
+        chatTextarea.focus();
+    }
+});
+
+// Mengirim Pesan (Hanya ketika tombol Submit ditekan)
 document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const content = chatTextarea.value.trim();
@@ -407,6 +438,6 @@ document.getElementById('chat-form').addEventListener('submit', async (e) => {
         body: JSON.stringify({ sender: currentUser, content })
     });
     
-    // Tarik pesan terbaru segera
-    fetchMessages();
+    // Tarik pesan terbaru segera secara manual
+    fetchMessages(false);
 });
