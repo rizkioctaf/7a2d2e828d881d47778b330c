@@ -479,68 +479,77 @@
 
         async function loadContacts() {
             const currentUser = localStorage.getItem('sessionUser');
-            const res = await fetch(`/api/chat/users?user=${currentUser}`);
-            const data = await res.json();
-            
-            const contactList = document.getElementById('contact-list');
-            contactList.innerHTML = '';
+            try {
+                const res = await fetch(`/api/chat/users?user=${currentUser}`);
+                const text = await res.text(); // Baca sebagai teks dulu untuk mencegah error JSON parse
+                
+                if (!res.ok) {
+                    console.error("Server Error:", text);
+                    document.getElementById('contact-list').innerHTML = `<p style="color:red">Gagal memuat kontak (Error ${res.status}). Pastikan file API ada di folder yang benar.</p>`;
+                    return;
+                }
 
-            data.data.forEach(user => {
-                contactList.innerHTML += `
-                    <div class="user-item" onclick="openChat('${user.username}')">
-                        👤 ${user.username}
-                    </div>
-                `;
-            });
-        }
+                const data = JSON.parse(text);
+                const contactList = document.getElementById('contact-list');
+                contactList.innerHTML = '';
 
-        async function openChat(targetUser) {
-            currentChatTarget = targetUser;
-            document.getElementById('contact-list').style.display = 'none';
-            document.getElementById('chat-room').style.display = 'block';
-            document.getElementById('chat-target-name').innerText = targetUser;
-            
-            await fetchMessages();
-            // Polling untuk update chat otomatis setiap 3 detik
-            if(chatInterval) clearInterval(chatInterval);
-            chatInterval = setInterval(fetchMessages, 3000); 
-        }
-
-        function closeChat() {
-            if(chatInterval) clearInterval(chatInterval);
-            document.getElementById('chat-room').style.display = 'none';
-            document.getElementById('contact-list').style.display = 'grid';
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(user => {
+                        contactList.innerHTML += `
+                            <div class="user-item" onclick="openChat('${user.username}')">
+                                👤 ${user.username}
+                            </div>
+                        `;
+                    });
+                } else {
+                    contactList.innerHTML = '<p>Belum ada pengguna lain terdaftar.</p>';
+                }
+            } catch (e) {
+                console.error("Parse Error:", e);
+            }
         }
 
         async function fetchMessages() {
             const username = localStorage.getItem('sessionUser');
             const password = localStorage.getItem('sessionPass');
             
-            const res = await fetch('/api/chat/history', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, targetUser: currentChatTarget })
-            });
-            const data = await res.json();
-            
-            const chatBox = document.getElementById('chat-messages');
-            chatBox.innerHTML = '';
-
-            data.data.forEach(msg => {
-                const isMe = msg.sender === username;
-                const date = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+            try {
+                const res = await fetch('/api/chat/history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, targetUser: currentChatTarget })
+                });
                 
-                chatBox.innerHTML += `
-                    <div class="bubble ${isMe ? 'bubble-me' : 'bubble-them'}">
-                        ${msg.content}
-                        <div style="font-size:10px; color:gray; text-align:right; margin-top:5px;">${date}</div>
-                    </div>
-                `;
-            });
-            
-            // Auto scroll ke bawah
-            chatBox.scrollTop = chatBox.scrollHeight;
+                const text = await res.text();
+                if(!res.ok) {
+                    console.error("Chat Error:", text);
+                    return;
+                }
+
+                const data = JSON.parse(text);
+                const chatBox = document.getElementById('chat-messages');
+                chatBox.innerHTML = '';
+
+                if (data.data) {
+                    data.data.forEach(msg => {
+                        const isMe = msg.sender === username;
+                        const date = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                        
+                        chatBox.innerHTML += `
+                            <div class="bubble ${isMe ? 'bubble-me' : 'bubble-them'}">
+                                ${msg.content.replace(/\n/g, '<br>')}
+                                <div style="font-size:10px; color:gray; text-align:right; margin-top:5px;">${date}</div>
+                            </div>
+                        `;
+                    });
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
+
+        // Fungsi sendChatMessage tetap seperti sebelumnya, karena kita sudah mencegat error di history
 
         async function sendChatMessage() {
             const input = document.getElementById('chat-input');
@@ -564,7 +573,6 @@
             input.focus();
             fetchMessages(); // Langsung load pesan baru
         }
-        
 
         // Cek sesi saat halaman pertama kali dimuat
         window.onload = checkSession;
