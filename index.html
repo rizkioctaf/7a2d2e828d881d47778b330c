@@ -15,6 +15,14 @@
         button.action-btn { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
         button.action-btn:hover { background-color: #0056b3; }
         .nav-buttons button { margin: 5px 0; }
+        .forum-section { display: none; margin-top: 20px; }
+        .article-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
+        .article-card h4 { margin: 0 0 10px 0; }
+        .article-meta { font-size: 12px; color: gray; margin-bottom: 10px; }
+        .btn-small { padding: 5px 10px; font-size: 12px; margin-right: 5px; cursor: pointer; }
+        .btn-edit { background-color: #ffc107; border: none; }
+        .btn-delete { background-color: #dc3545; color: white; border: none; }
+        textarea { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; height: 100px; }
     </style>
 </head>
 <body>
@@ -90,6 +98,25 @@
         <button class="action-btn" style="background-color: red;" onclick="submitForm('/api/delete-account', {username: 'delete-username', password: 'delete-password'})">Hapus Akun Permanen</button>
     </div>
 
+    <!-- Area Forum Utama -->
+    <div id="forum" class="forum-section">
+        <h3>Halo, <span id="currentUser"></span>! <button onclick="logout()" class="btn-small">Logout</button></h3>
+        
+        <!-- Form Buat / Edit Artikel -->
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <h4 id="form-title">Buat Artikel Baru</h4>
+            <input type="hidden" id="article-id"> <!-- Hidden ID untuk mode Edit -->
+            <input type="text" id="article-title" placeholder="Judul Artikel">
+            <textarea id="article-content" placeholder="Tulis isi artikel..."></textarea>
+            <button class="action-btn" onclick="saveArticle()">Posting Artikel</button>
+        </div>
+
+        <h3>Daftar Artikel</h3>
+        <div id="articles-list">
+            <!-- Artikel akan dimuat di sini -->
+        </div>
+    </div>
+
     <script>
         // Navigasi antar form
         function showSection(id) {
@@ -107,7 +134,7 @@
             }
         }
 
-        // Fungsi Universal untuk mengirim HTTP POST
+        // (UPDATE FUNGSI SUBMIT FORM SEBELUMNYA)
         async function submitForm(endpoint, fieldMappings) {
             const payload = {};
             for (const [key, elementId] of Object.entries(fieldMappings)) {
@@ -120,11 +147,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
                 const data = await response.json();
                 
                 if (response.ok) {
                     alert('Sukses: ' + data.message);
+                    
+                    // --- TAMBAHAN UNTUK LOGIN ---
+                    if(endpoint === '/api/login') {
+                        localStorage.setItem('sessionUser', payload.username);
+                        localStorage.setItem('sessionPass', payload.password);
+                        checkSession(); // Masuk ke forum
+                    }
                 } else {
                     alert('Gagal: ' + data.error);
                 }
@@ -132,6 +165,134 @@
                 alert('Terjadi kesalahan koneksi.');
             }
         }
+
+        // --- LOGIKA FORUM (CRUD) ---
+
+        // Cek apakah user sudah login
+        function checkSession() {
+            const user = localStorage.getItem('sessionUser');
+            if (user) {
+                document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+                document.getElementById('forum').style.display = 'block';
+                document.querySelector('.nav-buttons').style.display = 'none';
+                document.getElementById('currentUser').innerText = user;
+                loadArticles();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('sessionUser');
+            localStorage.removeItem('sessionPass');
+            location.reload(); // Refresh halaman
+        }
+
+        // READ: Muat artikel
+        async function loadArticles() {
+            const res = await fetch('/api/articles/list');
+            const data = await res.json();
+            const listDiv = document.getElementById('articles-list');
+            listDiv.innerHTML = '';
+
+            const currentUser = localStorage.getItem('sessionUser');
+
+            data.data.forEach(article => {
+                const date = new Date(article.created_at).toLocaleString('id-ID');
+                let actionButtons = '';
+                
+                // Munculkan tombol Edit/Delete jika ini artikel milik user yang login
+                if (article.username === currentUser) {
+                    // Stringify data agar aman dikirim ke parameter fungsi
+                    const titleSafe = article.title.replace(/'/g, "\\'");
+                    const contentSafe = article.content.replace(/'/g, "\\'");
+                    
+                    actionButtons = `
+                        <button class="btn-small btn-edit" onclick="editMode(${article.id}, '${titleSafe}', '${contentSafe}')">Edit</button>
+                        <button class="btn-small btn-delete" onclick="deleteArticle(${article.id})">Hapus</button>
+                    `;
+                }
+
+                listDiv.innerHTML += `
+                    <div class="article-card">
+                        <h4>${article.title}</h4>
+                        <div class="article-meta">Oleh: <b>${article.username}</b> | ${date}</div>
+                        <p>${article.content.replace(/\n/g, '<br>')}</p>
+                        ${actionButtons}
+                    </div>
+                `;
+            });
+        }
+
+        // CREATE & UPDATE: Simpan artikel
+        async function saveArticle() {
+            const id = document.getElementById('article-id').value;
+            const title = document.getElementById('article-title').value;
+            const content = document.getElementById('article-content').value;
+            const username = localStorage.getItem('sessionUser');
+            const password = localStorage.getItem('sessionPass');
+
+            if(!title || !content) return alert("Judul dan konten tidak boleh kosong!");
+
+            const payload = { username, password, title, content };
+            let endpoint = '/api/articles/create';
+
+            // Jika ada ID, berarti mode Update
+            if (id) {
+                payload.id = id;
+                endpoint = '/api/articles/edit';
+            }
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(data.message);
+                document.getElementById('article-id').value = '';
+                document.getElementById('article-title').value = '';
+                document.getElementById('article-content').value = '';
+                document.getElementById('form-title').innerText = 'Buat Artikel Baru';
+                loadArticles();
+            } else {
+                alert("Error: " + data.error);
+            }
+        }
+
+        // Siapkan form untuk Edit (Update)
+        function editMode(id, title, content) {
+            document.getElementById('form-title').innerText = 'Edit Artikel';
+            document.getElementById('article-id').value = id;
+            document.getElementById('article-title').value = title;
+            document.getElementById('article-content').value = content;
+            window.scrollTo(0, 0); // Scroll ke atas
+        }
+
+        // DELETE: Hapus artikel
+        async function deleteArticle(id) {
+            if (!confirm("Yakin ingin menghapus artikel ini?")) return;
+
+            const username = localStorage.getItem('sessionUser');
+            const password = localStorage.getItem('sessionPass');
+
+            const res = await fetch('/api/articles/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, username, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(data.message);
+                loadArticles();
+            } else {
+                alert("Error: " + data.error);
+            }
+        }
+
+        // Cek sesi saat halaman pertama kali dimuat
+        window.onload = checkSession;
     </script>
 </body>
 </html>
