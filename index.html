@@ -5,59 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Akun Forum</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
         .form-section { display: none; margin-top: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; }
         .active { display: block; }
         .input-group { margin-bottom: 15px; }
-        input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        input, textarea { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        textarea { resize: vertical; height: 100px; }
         .password-container { display: flex; align-items: center; }
         .toggle-btn { margin-left: -60px; z-index: 10; cursor: pointer; background: none; border: none; font-size: 12px; }
-        button.action-btn { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button.action-btn { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 5px; }
         button.action-btn:hover { background-color: #0056b3; }
-        .nav-buttons button { margin: 5px 0; }
-        .forum-section { display: none; margin-top: 20px; }
-        .article-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
-        .article-card h4 { margin: 0 0 10px 0; }
+        .nav-buttons button { margin: 5px 0; padding: 8px; cursor: pointer; }
+        
+        /* Area Forum */
+        .main-nav { display: none; background: #007bff; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: white; font-weight: bold; }
+        .main-nav button { background: none; border: none; color: #ffcccc; font-weight: bold; cursor: pointer; float: right; }
+        .main-nav button:hover { text-decoration: underline; }
+        
+        .article-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; background: #fff; }
         .article-meta { font-size: 12px; color: gray; margin-bottom: 10px; }
-        .btn-small { padding: 5px 10px; font-size: 12px; margin-right: 5px; cursor: pointer; }
-        .btn-edit { background-color: #ffc107; border: none; }
-        .btn-delete { background-color: #dc3545; color: white; border: none; }
-        textarea { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; height: 100px; }
-        .char-counter { font-size: 12px; color: gray; text-align: right; margin-bottom: 10px; }
+        .btn-small { padding: 5px 10px; font-size: 12px; margin-right: 5px; cursor: pointer; border-radius: 3px; border: 1px solid #ccc; background: #f8f9fa; }
         .btn-new-post { background-color: #28a745; color: white; padding: 10px; border: none; width: 100%; margin-bottom: 20px; cursor: pointer; border-radius: 5px; font-weight: bold; }
         .btn-cancel { background-color: #6c757d; color: white; margin-top: 10px; }
-        textarea { resize: vertical; height: 150px; }
+        .char-counter { font-size: 12px; color: gray; text-align: right; margin-bottom: 10px; }
+        
+        /* Komentar */
         .comments-section { background: #f9f9f9; padding: 15px; margin-top: 10px; border-radius: 5px; display: none; }
         .comment-box { border-left: 2px solid #ccc; padding-left: 10px; margin-top: 15px; }
         .reply-btn { font-size: 11px; color: #007bff; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-top: 5px; }
         .reply-input-area { margin-top: 10px; display: none; }
         .reply-input-area textarea { height: 60px; }
-        /* Navigasi Utama setelah login */
-        .main-nav { display: none; background: #007bff; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
-        .main-nav button { background: none; border: none; color: white; font-weight: bold; margin-right: 15px; cursor: pointer; }
-        .main-nav button:hover { text-decoration: underline; }
-
-        /* Desain Area Chat */
-        .user-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .user-item { background: #eee; padding: 10px; text-align: center; border-radius: 5px; cursor: pointer; }
-        .user-item:hover { background: #ddd; }
-
-        .chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 15px; background: #fafafa; border-radius: 5px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .bubble { max-width: 75%; padding: 10px; border-radius: 15px; font-size: 14px; }
-        .bubble-me { background: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 0; }
-        .bubble-them { background: #fff; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 0; }
     </style>
 </head>
-<body>
+<body style="background: #f4f6f8;">
 
     <h2>Aplikasi Forum</h2>
-    <!-- Navigasi Setelah Login -->
+    
     <div id="main-nav" class="main-nav">
-        <button onclick="switchView('forum-list')">🏠 Beranda</button>
-        <button onclick="switchView('chat-section')">💬 Pesan Pribadi</button>
-        <button onclick="logout()" style="float: right; color: #ffcccc;">Logout</button>
+        <span>🏠 Beranda</span>
+        <button onclick="logout()">Logout</button>
     </div>
-
     
     <div class="nav-buttons">
         <button onclick="showSection('login')">Login</button>
@@ -67,7 +54,7 @@
         <button onclick="showSection('delete')">Hapus Akun</button>
     </div>
 
-    <!-- Login -->
+    <!-- Tampilan Akun (Login, Register, dll - Biarkan sama seperti sebelumnya) -->
     <div id="login" class="form-section active">
         <h3>Login</h3>
         <input type="text" id="login-username" placeholder="Username">
@@ -78,7 +65,6 @@
         <button class="action-btn" onclick="submitForm('/api/login', {username: 'login-username', password: 'login-password'})">Login</button>
     </div>
 
-    <!-- Register -->
     <div id="register" class="form-section">
         <h3>Buat Akun</h3>
         <input type="text" id="reg-username" placeholder="Username (Huruf & Angka)">
@@ -86,11 +72,10 @@
             <input type="password" id="reg-password" placeholder="Password">
             <button class="toggle-btn" onclick="togglePassword('reg-password')">Lihat</button>
         </div>
-        <input type="text" id="reg-code" placeholder="Kode Validasi (CREATE_CODE)">
+        <input type="text" id="reg-code" placeholder="Kode Validasi">
         <button class="action-btn" onclick="submitForm('/api/register', {username: 'reg-username', password: 'reg-password', createCode: 'reg-code'})">Daftar</button>
     </div>
 
-    <!-- Forgot Password -->
     <div id="forgot" class="form-section">
         <h3>Lupa Password</h3>
         <input type="text" id="forgot-username" placeholder="Username">
@@ -98,11 +83,10 @@
             <input type="password" id="forgot-new-password" placeholder="Password Baru">
             <button class="toggle-btn" onclick="togglePassword('forgot-new-password')">Lihat</button>
         </div>
-        <input type="text" id="forgot-code" placeholder="Kode Validasi (FORGOT_CODE)">
+        <input type="text" id="forgot-code" placeholder="Kode Validasi">
         <button class="action-btn" onclick="submitForm('/api/forgot', {username: 'forgot-username', newPassword: 'forgot-new-password', forgotCode: 'forgot-code'})">Reset Password</button>
     </div>
 
-    <!-- Change Password -->
     <div id="change" class="form-section">
         <h3>Ubah Password</h3>
         <input type="text" id="change-username" placeholder="Username">
@@ -117,7 +101,6 @@
         <button class="action-btn" onclick="submitForm('/api/change-password', {username: 'change-username', oldPassword: 'change-old-password', newPassword: 'change-new-password'})">Update Password</button>
     </div>
 
-    <!-- Delete Account -->
     <div id="delete" class="form-section">
         <h3>Hapus Akun</h3>
         <input type="text" id="delete-username" placeholder="Username">
@@ -128,26 +111,25 @@
         <button class="action-btn" style="background-color: red;" onclick="submitForm('/api/delete-account', {username: 'delete-username', password: 'delete-password'})">Hapus Akun Permanen</button>
     </div>
 
-    <!-- TAMPILAN TIMELINE (DAFTAR POSTINGAN) -->
-    <div id="forum-list" class="form-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3>Beranda (<span id="currentUser"></span>)</h3>
-            <button onclick="logout()" class="btn-small btn-delete">Logout</button>
+    <!-- TAMPILAN TIMELINE -->
+    <div id="forum-list" class="form-section" style="border:none; padding:0; background:none;">
+        <div style="margin-bottom: 15px;">
+            Halo, <b id="currentUser"></b>!
         </div>
         
         <button class="btn-new-post" onclick="openEditor()">+ Buat Postingan Baru</button>
 
         <div id="articles-list">
-            <!-- Artikel akan dimuat di sini -->
+            <!-- Artikel dimuat di sini -->
         </div>
     </div>
 
-    <!-- TAMPILAN EDITOR (HANYA UNTUK CREATE) -->
+    <!-- TAMPILAN EDITOR -->
     <div id="forum-editor" class="form-section">
         <h3>Tulis Postingan</h3>
-        <textarea id="article-content" maxlength="2000" placeholder="Apa yang sedang Anda pikirkan? (Maksimal 2000 karakter)" oninput="updateCounter()"></textarea>
+        <textarea id="article-content" maxlength="2000" placeholder="Apa yang sedang Anda pikirkan?" oninput="updateCounter()"></textarea>
         <div id="char-count" class="char-counter">0 / 2000</div>
-        <!-- Input Media Baru -->
+        
         <div style="margin-bottom: 15px;">
             <label for="article-media" style="font-size: 14px; display: block; margin-bottom: 5px;">Upload Media (Opsional, Maks 50MB):</label>
             <input type="file" id="article-media" accept="image/*,video/*,audio/*">
@@ -157,49 +139,17 @@
         <button class="action-btn btn-cancel" onclick="closeEditor()">Batal</button>
     </div>
 
-    <!-- TAMPILAN CHAT (BARU) -->
-    <div id="chat-section" class="form-section">
-        <h3>Pesan Pribadi</h3>
-        
-        <!-- Daftar Kontak -->
-        <div id="contact-list" class="user-list">
-            <!-- Daftar user muncul di sini -->
-        </div>
-
-        <!-- Ruang Obrolan -->
-        <div id="chat-room" style="display: none;">
-            <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
-                <button class="btn-small" onclick="closeChat()">⬅ Kembali</button> 
-                Chat dengan <span id="chat-target-name"></span>
-            </h4>
-            
-            <div id="chat-messages" class="chat-box"></div>
-            
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" placeholder="Tulis pesan..." style="margin-top: 0;">
-                <button class="btn-small btn-new-post" style="width: 80px; margin: 0;" onclick="sendChatMessage()">Kirim</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // Navigasi antar form
         function showSection(id) {
             document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        // Fitur Toggle Lihat Password
         function togglePassword(inputId) {
             const input = document.getElementById(inputId);
-            if (input.type === "password") {
-                input.type = "text";
-            } else {
-                input.type = "password";
-            }
+            input.type = input.type === "password" ? "text" : "password";
         }
 
-        // (UPDATE FUNGSI SUBMIT FORM SEBELUMNYA)
         async function submitForm(endpoint, fieldMappings) {
             const payload = {};
             for (const [key, elementId] of Object.entries(fieldMappings)) {
@@ -216,12 +166,10 @@
                 
                 if (response.ok) {
                     alert('Sukses: ' + data.message);
-                    
-                    // --- TAMBAHAN UNTUK LOGIN ---
                     if(endpoint === '/api/login') {
                         localStorage.setItem('sessionUser', payload.username);
                         localStorage.setItem('sessionPass', payload.password);
-                        checkSession(); // Masuk ke forum
+                        checkSession();
                     }
                 } else {
                     alert('Gagal: ' + data.error);
@@ -231,31 +179,19 @@
             }
         }
 
-        // --- LOGIKA FORUM (CRUD) ---
-// --- LOGIKA FORUM (TIMELINE & EDITOR SAJA) ---
+        // --- LOGIKA FORUM (TANPA CHAT) ---
 
         function checkSession() {
             const user = localStorage.getItem('sessionUser');
             if (user) {
                 document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
-                document.querySelector('.nav-buttons').style.display = 'none'; // Sembunyikan tombol login/register
+                document.querySelector('.nav-buttons').style.display = 'none';
                 
-                document.getElementById('main-nav').style.display = 'block'; // Tampilkan menu navigasi
-                document.getElementById('forum-list').classList.add('active'); // Default buka beranda
+                document.getElementById('main-nav').style.display = 'block';
+                document.getElementById('forum-list').classList.add('active');
+                document.getElementById('currentUser').innerText = user;
                 
                 loadArticles();
-            }
-        }
-
-        // Fungsi Switch Tab Menu
-        function switchView(viewId) {
-            document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            
-            if (viewId === 'forum-list') loadArticles();
-            if (viewId === 'chat-section') {
-                closeChat(); // Reset tampilan ke daftar kontak
-                loadContacts();
             }
         }
 
@@ -272,17 +208,17 @@
 
         function openEditor() {
             document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
-            document.getElementById('forum-editor').classList.add('active'); // Tampilkan Editor
-            document.getElementById('article-content').value = ''; // Kosongkan form
+            document.getElementById('forum-editor').classList.add('active');
+            document.getElementById('article-content').value = '';
+            document.getElementById('article-media').value = '';
             updateCounter();
         }
 
         function closeEditor() {
             document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
-            document.getElementById('forum-list').classList.add('active'); // Kembali ke Timeline
+            document.getElementById('forum-list').classList.add('active');
         }
 
-        // READ: Muat artikel tanpa tombol aksi
         async function loadArticles() {
             const res = await fetch('/api/articles/list');
             const data = await res.json();
@@ -292,7 +228,6 @@
             data.data.forEach(article => {
                 const date = new Date(article.created_at).toLocaleString('id-ID');
                 
-                // Menyiapkan HTML untuk Media jika ada
                 let mediaHTML = '';
                 if (article.media_url) {
                     const mediaSrc = `/api/media/${article.media_url}`;
@@ -309,43 +244,81 @@
                     <div class="article-card">
                         <div class="article-meta"><b>@${article.username}</b> • ${date}</div>
                         <div style="margin-top: 8px;">${article.content.replace(/\n/g, '<br>')}</div>
-                        
-                        <!-- Area Media -->
                         ${mediaHTML}
                         
                         <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                            <!-- TAMPILKAN JUMLAH KOMENTAR DI SINI -->
                             <button class="btn-small" onclick="toggleComments(${article.id})">💬 Komentar (${article.comment_count})</button>
                         </div>
 
-                        <!-- Area Komentar ... (kode sebelumnya tetap sama) -->
                         <div id="comments-section-${article.id}" class="comments-section">
                             <div id="comments-list-${article.id}"></div>
                             <div style="margin-top: 15px;">
                                 <textarea id="comment-input-${article.id}" placeholder="Tulis komentar... (Maks 500 karakter)" style="height:60px;"></textarea>
-                                <button class="btn-small btn-new-post" style="width: auto; padding: 8px 15px;" onclick="submitComment(${article.id}, null)">Kirim Komentar</button>
+                                <button class="btn-small btn-new-post" style="width: auto; padding: 8px 15px; margin-bottom: 0;" onclick="submitComment(${article.id}, null)">Kirim Komentar</button>
                             </div>
                         </div>
                     </div>
                 `;
             });
 
-            if (data.data.length === 0) listDiv.innerHTML = '<p style="text-align:center; color:gray;">Belum ada postingan.</p>';
+            if (data.data.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; color:gray;">Belum ada postingan. Jadilah yang pertama!</p>';
+            }
         }
 
-        // Buka/Tutup area komentar & muat datanya
+        async function saveArticle() {
+            const content = document.getElementById('article-content').value;
+            const mediaInput = document.getElementById('article-media');
+            const username = localStorage.getItem('sessionUser');
+            const password = localStorage.getItem('sessionPass');
+
+            if(!content.trim()) return alert("Konten tidak boleh kosong!");
+            if(content.length > 2000) return alert("Konten melebihi batas!");
+            if(mediaInput.files[0] && mediaInput.files[0].size > 50 * 1024 * 1024) return alert("Ukuran file maksimal 50MB!");
+
+            const btn = document.querySelector('#forum-editor .action-btn');
+            btn.disabled = true;
+            btn.innerText = "Mengunggah... (Mohon tunggu)";
+
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+            formData.append('content', content);
+            if (mediaInput.files.length > 0) formData.append('media', mediaInput.files[0]);
+
+            try {
+                const res = await fetch('/api/articles/create', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    closeEditor();
+                    loadArticles(); 
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (e) {
+                alert("Terjadi kesalahan koneksi.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Terbitkan";
+            }
+        }
+
+        // --- LOGIKA KOMENTAR ---
+
         async function toggleComments(articleId) {
             const section = document.getElementById(`comments-section-${articleId}`);
             if (section.style.display === 'block') {
                 section.style.display = 'none';
                 return;
             }
-            
             section.style.display = 'block';
             await fetchComments(articleId);
         }
 
-        // Ambil komentar dari API
         async function fetchComments(articleId) {
             const listDiv = document.getElementById(`comments-list-${articleId}`);
             listDiv.innerHTML = '<span style="font-size:12px;">Memuat komentar...</span>';
@@ -357,15 +330,11 @@
                 listDiv.innerHTML = '<span style="font-size:12px; color:gray;">Belum ada komentar.</span>';
                 return;
             }
-
-            // Render menjadi struktur bersarang (tree)
             listDiv.innerHTML = renderCommentTree(data.data, articleId, null);
         }
 
-        // Fungsi Rekursif untuk mencetak balasan bertingkat
         function renderCommentTree(comments, articleId, parentId) {
             let html = '';
-            // Filter komentar yang induknya sama dengan parentId
             const children = comments.filter(c => c.parent_id === parentId);
             
             children.forEach(c => {
@@ -376,14 +345,11 @@
                         
                         <button class="reply-btn" onclick="document.getElementById('reply-area-${c.id}').style.display='block'">Balas</button>
                         
-                        <!-- Form Balasan Spesifik -->
                         <div id="reply-area-${c.id}" class="reply-input-area">
                             <textarea id="reply-input-${c.id}" placeholder="Balas @${c.username}..."></textarea>
                             <button class="btn-small" onclick="submitComment(${articleId}, ${c.id})">Kirim</button>
                             <button class="btn-small btn-cancel" onclick="document.getElementById('reply-area-${c.id}').style.display='none'">Batal</button>
                         </div>
-
-                        <!-- Render anak komentarnya (rekursif) -->
                         <div style="margin-left: 5px;">
                             ${renderCommentTree(comments, articleId, c.id)}
                         </div>
@@ -393,12 +359,9 @@
             return html;
         }
 
-        // Kirim Komentar atau Balasan
         async function submitComment(articleId, parentId) {
             const username = localStorage.getItem('sessionUser');
             const password = localStorage.getItem('sessionPass');
-            
-            // Ambil input dari form utama ATAU form balasan
             const inputId = parentId ? `reply-input-${parentId}` : `comment-input-${articleId}`;
             const content = document.getElementById(inputId).value;
 
@@ -414,8 +377,10 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    document.getElementById(inputId).value = ''; // Kosongkan input
-                    await fetchComments(articleId); // Muat ulang komentar
+                    document.getElementById(inputId).value = '';
+                    await fetchComments(articleId);
+                    // Panggil ulang loadArticles untuk update angka count komentar
+                    loadArticles(); 
                 } else {
                     alert("Error: " + data.error);
                 }
@@ -424,157 +389,6 @@
             }
         }
 
-        // CREATE: Simpan artikel baru
-        async function saveArticle() {
-            const content = document.getElementById('article-content').value;
-            const mediaInput = document.getElementById('article-media');
-            const username = localStorage.getItem('sessionUser');
-            const password = localStorage.getItem('sessionPass');
-
-            if(!content.trim()) return alert("Konten tidak boleh kosong!");
-            if(content.length > 2000) return alert("Konten melebihi batas!");
-            if(mediaInput.files[0] && mediaInput.files[0].size > 50 * 1024 * 1024) return alert("Ukuran file maksimal 50MB!");
-
-            const btn = document.querySelector('#forum-editor .action-btn');
-            btn.disabled = true;
-            btn.innerText = "Mengunggah... (Mohon tunggu)";
-
-            // Menggunakan FormData
-            const formData = new FormData();
-            formData.append('username', username);
-            formData.append('password', password);
-            formData.append('content', content);
-            
-            if (mediaInput.files.length > 0) {
-                formData.append('media', mediaInput.files[0]);
-            }
-
-            try {
-                const res = await fetch('/api/articles/create', {
-                    method: 'POST',
-                    // HAPUS headers 'Content-Type' agar browser mengatur boundary Multipart otomatis
-                    body: formData
-                });
-                const data = await res.json();
-
-                if (res.ok) {
-                    closeEditor();
-                    document.getElementById('article-media').value = ''; // Reset input file
-                    loadArticles(); 
-                } else {
-                    alert("Error: " + data.error);
-                }
-            } catch (e) {
-                alert("Terjadi kesalahan koneksi.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Terbitkan";
-            }
-        }
-
-        // --- LOGIKA CHAT PRIBADI ---
-        
-        let currentChatTarget = ''; // Simpan nama teman chat saat ini
-        let chatInterval = null; // Auto-refresh obrolan
-
-        async function loadContacts() {
-            const currentUser = localStorage.getItem('sessionUser');
-            try {
-                const res = await fetch(`/api/chat/users?user=${currentUser}`);
-                const text = await res.text(); // Baca sebagai teks dulu untuk mencegah error JSON parse
-                
-                if (!res.ok) {
-                    console.error("Server Error:", text);
-                    document.getElementById('contact-list').innerHTML = `<p style="color:red">Gagal memuat kontak (Error ${res.status}). Pastikan file API ada di folder yang benar.</p>`;
-                    return;
-                }
-
-                const data = JSON.parse(text);
-                const contactList = document.getElementById('contact-list');
-                contactList.innerHTML = '';
-
-                if (data.data && data.data.length > 0) {
-                    data.data.forEach(user => {
-                        contactList.innerHTML += `
-                            <div class="user-item" onclick="openChat('${user.username}')">
-                                👤 ${user.username}
-                            </div>
-                        `;
-                    });
-                } else {
-                    contactList.innerHTML = '<p>Belum ada pengguna lain terdaftar.</p>';
-                }
-            } catch (e) {
-                console.error("Parse Error:", e);
-            }
-        }
-
-        async function fetchMessages() {
-            const username = localStorage.getItem('sessionUser');
-            const password = localStorage.getItem('sessionPass');
-            
-            try {
-                const res = await fetch('/api/chat/history', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, targetUser: currentChatTarget })
-                });
-                
-                const text = await res.text();
-                if(!res.ok) {
-                    console.error("Chat Error:", text);
-                    return;
-                }
-
-                const data = JSON.parse(text);
-                const chatBox = document.getElementById('chat-messages');
-                chatBox.innerHTML = '';
-
-                if (data.data) {
-                    data.data.forEach(msg => {
-                        const isMe = msg.sender === username;
-                        const date = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-                        
-                        chatBox.innerHTML += `
-                            <div class="bubble ${isMe ? 'bubble-me' : 'bubble-them'}">
-                                ${msg.content.replace(/\n/g, '<br>')}
-                                <div style="font-size:10px; color:gray; text-align:right; margin-top:5px;">${date}</div>
-                            </div>
-                        `;
-                    });
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        // Fungsi sendChatMessage tetap seperti sebelumnya, karena kita sudah mencegat error di history
-
-        async function sendChatMessage() {
-            const input = document.getElementById('chat-input');
-            const content = input.value;
-            if(!content.trim()) return;
-
-            const username = localStorage.getItem('sessionUser');
-            const password = localStorage.getItem('sessionPass');
-
-            input.value = 'Mengirim...';
-            input.disabled = true;
-
-            await fetch('/api/chat/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, targetUser: currentChatTarget, content })
-            });
-
-            input.value = '';
-            input.disabled = false;
-            input.focus();
-            fetchMessages(); // Langsung load pesan baru
-        }
-
-        // Cek sesi saat halaman pertama kali dimuat
         window.onload = checkSession;
     </script>
 </body>
