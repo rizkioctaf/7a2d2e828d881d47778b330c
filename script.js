@@ -232,7 +232,16 @@ async function fetchMessages(isInitialLoad = false) {
             // Tambahkan user ke daftar knownUsers untuk keperluan Auto-Suggest
             knownUsers.add(msg.sender);
             
-            const time = new Date(msg.timestamp + 'Z').toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+            // Di dalam fetchMessages() saat melakukan loop data:
+
+            const dateObj = new Date(msg.timestamp + 'Z'); 
+            // Mengubah ke format YYYY-MM-DD HH:MM:SS
+            const time = dateObj.getFullYear() + '-' +
+                String(dateObj.getMonth() + 1).padStart(2, '0') + '-' +
+                String(dateObj.getDate()).padStart(2, '0') + ' ' +
+                String(dateObj.getHours()).padStart(2, '0') + ':' +
+                String(dateObj.getMinutes()).padStart(2, '0') + ':' +
+                String(dateObj.getSeconds()).padStart(2, '0');
             
             let rawHTML = marked.parse(msg.content);
             let safeMarkdownHTML = DOMPurify.sanitize(rawHTML, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'img', 'video', 'audio', 'source', 'span'], ALLOWED_ATTR: ['href', 'src', 'controls', 'type', 'preload', 'alt', 'class'] });

@@ -23,8 +23,13 @@ export async function onRequestPost(context) {
 
     if (!sender || !content) return new Response("Error", { status: 400 });
 
-    await env.DB.prepare("INSERT INTO messages (sender, content, reply_to) VALUES (?, ?, ?)")
-        .bind(sender, content, reply_to || null).run();
+    // Di dalam fungsi onRequestPost, ubah bagian ini:
+
+    await env.DB.prepare(
+        "INSERT INTO messages (sender, content, reply_to, timestamp) VALUES (?, ?, ?, datetime('now', 'localtime'))"
+    )
+    .bind(sender, content, reply_to || null)
+    .run();
 
     // BACKGROUND TASK: Hapus pesan > 30 hari (TANPA BACKUP)
     waitUntil(
