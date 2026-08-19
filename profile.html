@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profil Saya</title>
+    <script>
+        // PROTEKSI
+        const currentUser = localStorage.getItem('username');
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+    <a href="index.html">← Kembali ke Beranda</a>
+    <hr>
+    <h1>Profil: <span id="profile-name"></span></h1>
+    <button onclick="logout()">Logout Keluar Aplikasi</button>
+    
+    <hr>
+    <h3>Ganti Password</h3>
+    <input type="password" id="old-pass" placeholder="Password Lama"><br><br>
+    <input type="password" id="new-pass" placeholder="Password Baru"><br><br>
+    <button onclick="changePassword()">Simpan Password Baru</button>
+
+    <hr>
+    <h3 style="color:red;">Zona Berbahaya</h3>
+    <p>Menghapus akun akan menghapus semua artikel yang pernah Anda tulis.</p>
+    <input type="password" id="del-pass" placeholder="Masukkan Password untuk Konfirmasi"><br><br>
+    <button onclick="deleteAccount()" style="color:red;">Hapus Akun Saya Permanen</button>
+
+    <script>
+        document.getElementById('profile-name').innerText = currentUser;
+
+        function logout() {
+            localStorage.removeItem('username');
+            window.location.href = 'login.html';
+        }
+
+        async function changePassword() {
+            const oldPass = document.getElementById('old-pass').value;
+            const newPass = document.getElementById('new-pass').value;
+
+            const res = await fetch(`/api/auth?action=change_password`, {
+                method: 'POST',
+                body: JSON.stringify({ username: currentUser, old_password: oldPass, new_password: newPass })
+            });
+
+            if (res.ok) {
+                alert("Password berhasil diubah! Silakan login ulang.");
+                logout();
+            } else {
+                alert("Gagal. Pastikan password lama benar.");
+            }
+        }
+
+        async function deleteAccount() {
+            const pass = document.getElementById('del-pass').value;
+            if(!confirm("Yakin ingin menghapus akun? Ini tidak bisa dibatalkan!")) return;
+
+            const res = await fetch(`/api/auth?action=delete_account`, {
+                method: 'POST',
+                body: JSON.stringify({ username: currentUser, password: pass })
+            });
+
+            if (res.ok) {
+                alert("Akun dan seluruh artikel Anda berhasil dihapus.");
+                logout();
+            } else {
+                alert("Gagal. Password salah.");
+            }
+        }
+    </script>
+</body>
+</html>
