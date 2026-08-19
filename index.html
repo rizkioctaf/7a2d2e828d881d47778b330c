@@ -23,6 +23,10 @@
         .btn-edit { background-color: #ffc107; border: none; }
         .btn-delete { background-color: #dc3545; color: white; border: none; }
         textarea { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; height: 100px; }
+        .char-counter { font-size: 12px; color: gray; text-align: right; margin-bottom: 10px; }
+        .btn-new-post { background-color: #28a745; color: white; padding: 10px; border: none; width: 100%; margin-bottom: 20px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        .btn-cancel { background-color: #6c757d; color: white; margin-top: 10px; }
+        textarea { resize: vertical; height: 150px; }
     </style>
 </head>
 <body>
@@ -98,23 +102,31 @@
         <button class="action-btn" style="background-color: red;" onclick="submitForm('/api/delete-account', {username: 'delete-username', password: 'delete-password'})">Hapus Akun Permanen</button>
     </div>
 
-    <!-- Area Forum Utama -->
-    <div id="forum" class="forum-section">
-        <h3>Halo, <span id="currentUser"></span>! <button onclick="logout()" class="btn-small">Logout</button></h3>
-        
-        <!-- Form Buat / Edit Artikel -->
-        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-            <h4 id="form-title">Buat Artikel Baru</h4>
-            <input type="hidden" id="article-id"> <!-- Hidden ID untuk mode Edit -->
-            <input type="text" id="article-title" placeholder="Judul Artikel">
-            <textarea id="article-content" placeholder="Tulis isi artikel..."></textarea>
-            <button class="action-btn" onclick="saveArticle()">Posting Artikel</button>
+    <!-- TAMPILAN TIMELINE (DAFTAR POSTINGAN) -->
+    <div id="forum-list" class="form-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Beranda (<span id="currentUser"></span>)</h3>
+            <button onclick="logout()" class="btn-small btn-delete">Logout</button>
         </div>
+        
+        <button class="btn-new-post" onclick="openEditor()">+ Buat Postingan Baru</button>
 
-        <h3>Daftar Artikel</h3>
         <div id="articles-list">
             <!-- Artikel akan dimuat di sini -->
         </div>
+    </div>
+
+    <!-- TAMPILAN EDITOR (CREATE / EDIT) -->
+    <div id="forum-editor" class="form-section">
+        <h3 id="form-title">Tulis Postingan</h3>
+        <input type="hidden" id="article-id"> 
+        
+        <!-- Maxlength ditambahkan ke textarea -->
+        <textarea id="article-content" maxlength="2000" placeholder="Apa yang sedang Anda pikirkan? (Maksimal 2000 karakter)" oninput="updateCounter()"></textarea>
+        <div id="char-count" class="char-counter">0 / 2000</div>
+        
+        <button class="action-btn" onclick="saveArticle()">Terbitkan</button>
+        <button class="action-btn btn-cancel" onclick="closeEditor()">Batal</button>
     </div>
 
     <script>
@@ -168,12 +180,13 @@
 
         // --- LOGIKA FORUM (CRUD) ---
 
-        // Cek apakah user sudah login
+        // --- LOGIKA FORUM (TIMELINE & EDITOR) ---
+
         function checkSession() {
             const user = localStorage.getItem('sessionUser');
             if (user) {
                 document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
-                document.getElementById('forum').style.display = 'block';
+                document.getElementById('forum-list').classList.add('active'); // Tampilkan Timeline
                 document.querySelector('.nav-buttons').style.display = 'none';
                 document.getElementById('currentUser').innerText = user;
                 loadArticles();
@@ -183,10 +196,29 @@
         function logout() {
             localStorage.removeItem('sessionUser');
             localStorage.removeItem('sessionPass');
-            location.reload(); // Refresh halaman
+            location.reload();
         }
 
-        // READ: Muat artikel
+        function updateCounter() {
+            const content = document.getElementById('article-content').value;
+            document.getElementById('char-count').innerText = `${content.length} / 2000`;
+        }
+
+        function openEditor(id = '', content = '') {
+            document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('forum-editor').classList.add('active'); // Tampilkan Editor
+            
+            document.getElementById('article-id').value = id;
+            document.getElementById('article-content').value = content;
+            document.getElementById('form-title').innerText = id ? 'Edit Postingan' : 'Tulis Postingan';
+            updateCounter();
+        }
+
+        function closeEditor() {
+            document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('forum-list').classList.add('active'); // Kembali ke Timeline
+        }
+
         async function loadArticles() {
             const res = await fetch('/api/articles/list');
             const data = await res.json();
@@ -199,80 +231,75 @@
                 const date = new Date(article.created_at).toLocaleString('id-ID');
                 let actionButtons = '';
                 
-                // Munculkan tombol Edit/Delete jika ini artikel milik user yang login
                 if (article.username === currentUser) {
-                    // Stringify data agar aman dikirim ke parameter fungsi
-                    const titleSafe = article.title.replace(/'/g, "\\'");
-                    const contentSafe = article.content.replace(/'/g, "\\'");
+                    const contentSafe = article.content.replace(/'/g, "\\'").replace(/\n/g, "\\n");
                     
                     actionButtons = `
-                        <button class="btn-small btn-edit" onclick="editMode(${article.id}, '${titleSafe}', '${contentSafe}')">Edit</button>
-                        <button class="btn-small btn-delete" onclick="deleteArticle(${article.id})">Hapus</button>
+                        <div style="margin-top: 10px;">
+                            <button class="btn-small btn-edit" onclick="openEditor(${article.id}, '${contentSafe}')">Edit</button>
+                            <button class="btn-small btn-delete" onclick="deleteArticle(${article.id})">Hapus</button>
+                        </div>
                     `;
                 }
 
                 listDiv.innerHTML += `
                     <div class="article-card">
-                        <h4>${article.title}</h4>
-                        <div class="article-meta">Oleh: <b>${article.username}</b> | ${date}</div>
-                        <p>${article.content.replace(/\n/g, '<br>')}</p>
+                        <div class="article-meta"><b>@${article.username}</b> • ${date}</div>
+                        <!-- Tampilkan isi langsung -->
+                        <div style="margin-top: 8px;">${article.content.replace(/\n/g, '<br>')}</div>
                         ${actionButtons}
                     </div>
                 `;
             });
         }
 
-        // CREATE & UPDATE: Simpan artikel
         async function saveArticle() {
             const id = document.getElementById('article-id').value;
-            const title = document.getElementById('article-title').value;
             const content = document.getElementById('article-content').value;
             const username = localStorage.getItem('sessionUser');
             const password = localStorage.getItem('sessionPass');
 
-            if(!title || !content) return alert("Judul dan konten tidak boleh kosong!");
+            if(!content.trim()) return alert("Konten tidak boleh kosong!");
+            if(content.length > 2000) return alert("Konten melebihi batas 2000 karakter!");
 
-            const payload = { username, password, title, content };
+            const payload = { username, password, content };
             let endpoint = '/api/articles/create';
 
-            // Jika ada ID, berarti mode Update
             if (id) {
                 payload.id = id;
                 endpoint = '/api/articles/edit';
             }
 
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
+            // Nonaktifkan tombol sementara agar tidak dobel klik
+            const btn = document.querySelector('#forum-editor .action-btn');
+            btn.disabled = true;
+            btn.innerText = "Memproses...";
 
-            if (res.ok) {
-                alert(data.message);
-                document.getElementById('article-id').value = '';
-                document.getElementById('article-title').value = '';
-                document.getElementById('article-content').value = '';
-                document.getElementById('form-title').innerText = 'Buat Artikel Baru';
-                loadArticles();
-            } else {
-                alert("Error: " + data.error);
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    closeEditor(); // Kembali ke timeline utama
+                    loadArticles(); // Muat ulang postingan
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (e) {
+                alert("Terjadi kesalahan koneksi.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Terbitkan";
             }
         }
 
-        // Siapkan form untuk Edit (Update)
-        function editMode(id, title, content) {
-            document.getElementById('form-title').innerText = 'Edit Artikel';
-            document.getElementById('article-id').value = id;
-            document.getElementById('article-title').value = title;
-            document.getElementById('article-content').value = content;
-            window.scrollTo(0, 0); // Scroll ke atas
-        }
-
-        // DELETE: Hapus artikel
+        // Fungsi deleteArticle tetap sama seperti sebelumnya...
         async function deleteArticle(id) {
-            if (!confirm("Yakin ingin menghapus artikel ini?")) return;
-
+            if (!confirm("Yakin ingin menghapus postingan ini?")) return;
             const username = localStorage.getItem('sessionUser');
             const password = localStorage.getItem('sessionPass');
 
@@ -281,12 +308,11 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, username, password })
             });
-            const data = await res.json();
-
+            
             if (res.ok) {
-                alert(data.message);
                 loadArticles();
             } else {
+                const data = await res.json();
                 alert("Error: " + data.error);
             }
         }
