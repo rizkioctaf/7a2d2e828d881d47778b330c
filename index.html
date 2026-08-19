@@ -126,6 +126,11 @@
         <h3>Tulis Postingan</h3>
         <textarea id="article-content" maxlength="2000" placeholder="Apa yang sedang Anda pikirkan? (Maksimal 2000 karakter)" oninput="updateCounter()"></textarea>
         <div id="char-count" class="char-counter">0 / 2000</div>
+        <!-- Input Media Baru -->
+        <div style="margin-bottom: 15px;">
+            <label for="article-media" style="font-size: 14px; display: block; margin-bottom: 5px;">Upload Media (Opsional, Maks 50MB):</label>
+            <input type="file" id="article-media" accept="image/*,video/*,audio/*">
+        </div>
         
         <button class="action-btn" onclick="saveArticle()">Terbitkan</button>
         <button class="action-btn btn-cancel" onclick="closeEditor()">Batal</button>
@@ -227,20 +232,35 @@
             data.data.forEach(article => {
                 const date = new Date(article.created_at).toLocaleString('id-ID');
                 
+                // Menyiapkan HTML untuk Media jika ada
+                let mediaHTML = '';
+                if (article.media_url) {
+                    const mediaSrc = `/api/media/${article.media_url}`;
+                    if (article.media_type === 'image') {
+                        mediaHTML = `<img src="${mediaSrc}" style="max-width:100%; border-radius:5px; margin-top:10px;">`;
+                    } else if (article.media_type === 'video') {
+                        mediaHTML = `<video src="${mediaSrc}" controls style="max-width:100%; border-radius:5px; margin-top:10px;"></video>`;
+                    } else if (article.media_type === 'audio') {
+                        mediaHTML = `<audio src="${mediaSrc}" controls style="width:100%; margin-top:10px;"></audio>`;
+                    }
+                }
+                
                 listDiv.innerHTML += `
                     <div class="article-card">
                         <div class="article-meta"><b>@${article.username}</b> • ${date}</div>
                         <div style="margin-top: 8px;">${article.content.replace(/\n/g, '<br>')}</div>
                         
+                        <!-- Area Media -->
+                        ${mediaHTML}
+                        
                         <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                            <button class="btn-small" onclick="toggleComments(${article.id})">💬 Komentar</button>
+                            <!-- TAMPILKAN JUMLAH KOMENTAR DI SINI -->
+                            <button class="btn-small" onclick="toggleComments(${article.id})">💬 Komentar (${article.comment_count})</button>
                         </div>
 
-                        <!-- AREA KOMENTAR -->
+                        <!-- Area Komentar ... (kode sebelumnya tetap sama) -->
                         <div id="comments-section-${article.id}" class="comments-section">
                             <div id="comments-list-${article.id}"></div>
-                            
-                            <!-- Form Komentar Utama -->
                             <div style="margin-top: 15px;">
                                 <textarea id="comment-input-${article.id}" placeholder="Tulis komentar... (Maks 500 karakter)" style="height:60px;"></textarea>
                                 <button class="btn-small btn-new-post" style="width: auto; padding: 8px 15px;" onclick="submitComment(${article.id}, null)">Kirim Komentar</button>
@@ -347,29 +367,40 @@
         // CREATE: Simpan artikel baru
         async function saveArticle() {
             const content = document.getElementById('article-content').value;
+            const mediaInput = document.getElementById('article-media');
             const username = localStorage.getItem('sessionUser');
             const password = localStorage.getItem('sessionPass');
 
             if(!content.trim()) return alert("Konten tidak boleh kosong!");
-            if(content.length > 2000) return alert("Konten melebihi batas 2000 karakter!");
-
-            const payload = { username, password, content };
+            if(content.length > 2000) return alert("Konten melebihi batas!");
+            if(mediaInput.files[0] && mediaInput.files[0].size > 50 * 1024 * 1024) return alert("Ukuran file maksimal 50MB!");
 
             const btn = document.querySelector('#forum-editor .action-btn');
             btn.disabled = true;
-            btn.innerText = "Menerbitkan...";
+            btn.innerText = "Mengunggah... (Mohon tunggu)";
+
+            // Menggunakan FormData
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+            formData.append('content', content);
+            
+            if (mediaInput.files.length > 0) {
+                formData.append('media', mediaInput.files[0]);
+            }
 
             try {
                 const res = await fetch('/api/articles/create', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    // HAPUS headers 'Content-Type' agar browser mengatur boundary Multipart otomatis
+                    body: formData
                 });
                 const data = await res.json();
 
                 if (res.ok) {
-                    closeEditor(); // Kembali ke timeline utama
-                    loadArticles(); // Muat ulang postingan
+                    closeEditor();
+                    document.getElementById('article-media').value = ''; // Reset input file
+                    loadArticles(); 
                 } else {
                     alert("Error: " + data.error);
                 }
