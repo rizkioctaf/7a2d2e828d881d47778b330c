@@ -1,55 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Web Artikel - Home</title>
-    <script>
-        // PROTEKSI: Jika tidak ada data login, langsung lempar ke login.html
-        const currentUser = localStorage.getItem('username');
-        if (!currentUser) {
-            window.location.href = 'login.html';
-        }
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Akun Forum</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+        .form-section { display: none; margin-top: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; }
+        .active { display: block; }
+        .input-group { margin-bottom: 15px; }
+        input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        .password-container { display: flex; align-items: center; }
+        .toggle-btn { margin-left: -60px; z-index: 10; cursor: pointer; background: none; border: none; font-size: 12px; }
+        button.action-btn { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button.action-btn:hover { background-color: #0056b3; }
+        .nav-buttons button { margin: 5px 0; }
+    </style>
 </head>
 <body>
-    <h1>Daftar Artikel</h1>
-    <nav>
-        Halo, <a href="profile.html"><strong id="user-name"></strong> (Profil)</a> | 
-        <a href="write.html">Tulis Artikel</a>
-    </nav>
-    <hr>
-    <div id="articles">Memuat data...</div>
+
+    <h2>Aplikasi Forum</h2>
+    
+    <div class="nav-buttons">
+        <button onclick="showSection('login')">Login</button>
+        <button onclick="showSection('register')">Buat Akun</button>
+        <button onclick="showSection('forgot')">Lupa Password</button>
+        <button onclick="showSection('change')">Ubah Password</button>
+        <button onclick="showSection('delete')">Hapus Akun</button>
+    </div>
+
+    <!-- Login -->
+    <div id="login" class="form-section active">
+        <h3>Login</h3>
+        <input type="text" id="login-username" placeholder="Username">
+        <div class="password-container">
+            <input type="password" id="login-password" placeholder="Password">
+            <button class="toggle-btn" onclick="togglePassword('login-password')">Lihat</button>
+        </div>
+        <button class="action-btn" onclick="submitForm('/api/login', {username: 'login-username', password: 'login-password'})">Login</button>
+    </div>
+
+    <!-- Register -->
+    <div id="register" class="form-section">
+        <h3>Buat Akun</h3>
+        <input type="text" id="reg-username" placeholder="Username (Huruf & Angka)">
+        <div class="password-container">
+            <input type="password" id="reg-password" placeholder="Password">
+            <button class="toggle-btn" onclick="togglePassword('reg-password')">Lihat</button>
+        </div>
+        <input type="text" id="reg-code" placeholder="Kode Validasi (CREATE_CODE)">
+        <button class="action-btn" onclick="submitForm('/api/register', {username: 'reg-username', password: 'reg-password', createCode: 'reg-code'})">Daftar</button>
+    </div>
+
+    <!-- Forgot Password -->
+    <div id="forgot" class="form-section">
+        <h3>Lupa Password</h3>
+        <input type="text" id="forgot-username" placeholder="Username">
+        <div class="password-container">
+            <input type="password" id="forgot-new-password" placeholder="Password Baru">
+            <button class="toggle-btn" onclick="togglePassword('forgot-new-password')">Lihat</button>
+        </div>
+        <input type="text" id="forgot-code" placeholder="Kode Validasi (FORGOT_CODE)">
+        <button class="action-btn" onclick="submitForm('/api/forgot', {username: 'forgot-username', newPassword: 'forgot-new-password', forgotCode: 'forgot-code'})">Reset Password</button>
+    </div>
+
+    <!-- Change Password -->
+    <div id="change" class="form-section">
+        <h3>Ubah Password</h3>
+        <input type="text" id="change-username" placeholder="Username">
+        <div class="password-container">
+            <input type="password" id="change-old-password" placeholder="Password Lama">
+            <button class="toggle-btn" onclick="togglePassword('change-old-password')">Lihat</button>
+        </div>
+        <div class="password-container">
+            <input type="password" id="change-new-password" placeholder="Password Baru">
+            <button class="toggle-btn" onclick="togglePassword('change-new-password')">Lihat</button>
+        </div>
+        <button class="action-btn" onclick="submitForm('/api/change-password', {username: 'change-username', oldPassword: 'change-old-password', newPassword: 'change-new-password'})">Update Password</button>
+    </div>
+
+    <!-- Delete Account -->
+    <div id="delete" class="form-section">
+        <h3>Hapus Akun</h3>
+        <input type="text" id="delete-username" placeholder="Username">
+        <div class="password-container">
+            <input type="password" id="delete-password" placeholder="Password (Verifikasi)">
+            <button class="toggle-btn" onclick="togglePassword('delete-password')">Lihat</button>
+        </div>
+        <button class="action-btn" style="background-color: red;" onclick="submitForm('/api/delete-account', {username: 'delete-username', password: 'delete-password'})">Hapus Akun Permanen</button>
+    </div>
 
     <script>
-        // Tampilkan nama user
-        document.getElementById('user-name').innerText = currentUser;
-
-        // Fungsi Logout
-        function logout() {
-            localStorage.removeItem('username');
-            window.location.href = 'login.html'; // Setelah logout, tendang ke login
+        // Navigasi antar form
+        function showSection(id) {
+            document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
-        // Ambil data artikel (hanya berjalan jika sudah login)
-        fetch('/api/articles')
-            .then(res => res.json())
-            .then(data => {
-                const container = document.getElementById('articles');
-                container.innerHTML = '';
-                
-                if(data.length === 0) {
-                    container.innerHTML = '<p>Belum ada artikel.</p>';
-                    return;
-                }
+        // Fitur Toggle Lihat Password
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+            } else {
+                input.type = "password";
+            }
+        }
 
-                data.forEach(art => {
-                    container.innerHTML += `
-                        <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-                            <h2><a href="view.html?id=${art.id}">${art.title}</a></h2>
-                            <p><strong>Kategori:</strong> ${art.category} | <strong>Penulis:</strong> ${art.author}</p>
-                        </div>
-                    `;
+        // Fungsi Universal untuk mengirim HTTP POST
+        async function submitForm(endpoint, fieldMappings) {
+            const payload = {};
+            for (const [key, elementId] of Object.entries(fieldMappings)) {
+                payload[key] = document.getElementById(elementId).value;
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-            });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Sukses: ' + data.message);
+                } else {
+                    alert('Gagal: ' + data.error);
+                }
+            } catch (error) {
+                alert('Terjadi kesalahan koneksi.');
+            }
+        }
     </script>
 </body>
 </html>
