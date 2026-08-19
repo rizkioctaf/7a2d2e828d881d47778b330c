@@ -27,6 +27,11 @@
         .btn-new-post { background-color: #28a745; color: white; padding: 10px; border: none; width: 100%; margin-bottom: 20px; cursor: pointer; border-radius: 5px; font-weight: bold; }
         .btn-cancel { background-color: #6c757d; color: white; margin-top: 10px; }
         textarea { resize: vertical; height: 150px; }
+        .comments-section { background: #f9f9f9; padding: 15px; margin-top: 10px; border-radius: 5px; display: none; }
+        .comment-box { border-left: 2px solid #ccc; padding-left: 10px; margin-top: 15px; }
+        .reply-btn { font-size: 11px; color: #007bff; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-top: 5px; }
+        .reply-input-area { margin-top: 10px; display: none; }
+        .reply-input-area textarea { height: 60px; }
     </style>
 </head>
 <body>
@@ -222,18 +227,120 @@
             data.data.forEach(article => {
                 const date = new Date(article.created_at).toLocaleString('id-ID');
                 
-                // Render postingan (tanpa cek kepemilikan karena tidak ada tombol edit/hapus)
                 listDiv.innerHTML += `
                     <div class="article-card">
                         <div class="article-meta"><b>@${article.username}</b> • ${date}</div>
                         <div style="margin-top: 8px;">${article.content.replace(/\n/g, '<br>')}</div>
+                        
+                        <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
+                            <button class="btn-small" onclick="toggleComments(${article.id})">💬 Komentar</button>
+                        </div>
+
+                        <!-- AREA KOMENTAR -->
+                        <div id="comments-section-${article.id}" class="comments-section">
+                            <div id="comments-list-${article.id}"></div>
+                            
+                            <!-- Form Komentar Utama -->
+                            <div style="margin-top: 15px;">
+                                <textarea id="comment-input-${article.id}" placeholder="Tulis komentar... (Maks 500 karakter)" style="height:60px;"></textarea>
+                                <button class="btn-small btn-new-post" style="width: auto; padding: 8px 15px;" onclick="submitComment(${article.id}, null)">Kirim Komentar</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
 
-            // Tampilkan pesan jika kosong
+            if (data.data.length === 0) listDiv.innerHTML = '<p style="text-align:center; color:gray;">Belum ada postingan.</p>';
+        }
+
+        // Buka/Tutup area komentar & muat datanya
+        async function toggleComments(articleId) {
+            const section = document.getElementById(`comments-section-${articleId}`);
+            if (section.style.display === 'block') {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            await fetchComments(articleId);
+        }
+
+        // Ambil komentar dari API
+        async function fetchComments(articleId) {
+            const listDiv = document.getElementById(`comments-list-${articleId}`);
+            listDiv.innerHTML = '<span style="font-size:12px;">Memuat komentar...</span>';
+            
+            const res = await fetch(`/api/comments/list?article_id=${articleId}`);
+            const data = await res.json();
+            
             if (data.data.length === 0) {
-                listDiv.innerHTML = '<p style="text-align:center; color:gray;">Belum ada postingan. Jadilah yang pertama!</p>';
+                listDiv.innerHTML = '<span style="font-size:12px; color:gray;">Belum ada komentar.</span>';
+                return;
+            }
+
+            // Render menjadi struktur bersarang (tree)
+            listDiv.innerHTML = renderCommentTree(data.data, articleId, null);
+        }
+
+        // Fungsi Rekursif untuk mencetak balasan bertingkat
+        function renderCommentTree(comments, articleId, parentId) {
+            let html = '';
+            // Filter komentar yang induknya sama dengan parentId
+            const children = comments.filter(c => c.parent_id === parentId);
+            
+            children.forEach(c => {
+                html += `
+                    <div class="comment-box">
+                        <div class="article-meta"><b>@${c.username}</b> • ${new Date(c.created_at).toLocaleString('id-ID')}</div>
+                        <div style="margin-top: 5px; font-size:14px;">${c.content.replace(/\n/g, '<br>')}</div>
+                        
+                        <button class="reply-btn" onclick="document.getElementById('reply-area-${c.id}').style.display='block'">Balas</button>
+                        
+                        <!-- Form Balasan Spesifik -->
+                        <div id="reply-area-${c.id}" class="reply-input-area">
+                            <textarea id="reply-input-${c.id}" placeholder="Balas @${c.username}..."></textarea>
+                            <button class="btn-small" onclick="submitComment(${articleId}, ${c.id})">Kirim</button>
+                            <button class="btn-small btn-cancel" onclick="document.getElementById('reply-area-${c.id}').style.display='none'">Batal</button>
+                        </div>
+
+                        <!-- Render anak komentarnya (rekursif) -->
+                        <div style="margin-left: 5px;">
+                            ${renderCommentTree(comments, articleId, c.id)}
+                        </div>
+                    </div>
+                `;
+            });
+            return html;
+        }
+
+        // Kirim Komentar atau Balasan
+        async function submitComment(articleId, parentId) {
+            const username = localStorage.getItem('sessionUser');
+            const password = localStorage.getItem('sessionPass');
+            
+            // Ambil input dari form utama ATAU form balasan
+            const inputId = parentId ? `reply-input-${parentId}` : `comment-input-${articleId}`;
+            const content = document.getElementById(inputId).value;
+
+            if (!content.trim()) return alert("Komentar tidak boleh kosong!");
+
+            try {
+                const res = await fetch('/api/comments/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ article_id: articleId, parent_id: parentId, username, password, content })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    document.getElementById(inputId).value = ''; // Kosongkan input
+                    await fetchComments(articleId); // Muat ulang komentar
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (e) {
+                alert("Terjadi kesalahan.");
             }
         }
 

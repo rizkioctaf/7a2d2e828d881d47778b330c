@@ -1,12 +1,11 @@
 export async function onRequestGet(context) {
   const { env } = context;
   
-  // 1. LAZY CLEANUP: Hapus otomatis semua postingan yang lebih lama dari 30 hari
-  await env.DB.prepare(
-    "DELETE FROM articles WHERE created_at <= datetime('now', '-30 days')"
-  ).run();
+  // LAZY CLEANUP: Hapus artikel & komentar usang
+  await env.DB.prepare("DELETE FROM articles WHERE created_at <= datetime('now', '-30 days')").run();
+  await env.DB.prepare("DELETE FROM comments WHERE created_at <= datetime('now', '-30 days')").run();
+  await env.DB.prepare("DELETE FROM comments WHERE article_id NOT IN (SELECT id FROM articles)").run(); // Hapus komentar yatim
 
-  // 2. Ambil postingan yang tersisa (yang umurnya di bawah 30 hari)
   const { results } = await env.DB.prepare(
     "SELECT id, username, content, created_at FROM articles ORDER BY created_at DESC"
   ).all();
