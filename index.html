@@ -32,11 +32,32 @@
         .reply-btn { font-size: 11px; color: #007bff; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-top: 5px; }
         .reply-input-area { margin-top: 10px; display: none; }
         .reply-input-area textarea { height: 60px; }
+        /* Navigasi Utama setelah login */
+        .main-nav { display: none; background: #007bff; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .main-nav button { background: none; border: none; color: white; font-weight: bold; margin-right: 15px; cursor: pointer; }
+        .main-nav button:hover { text-decoration: underline; }
+
+        /* Desain Area Chat */
+        .user-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .user-item { background: #eee; padding: 10px; text-align: center; border-radius: 5px; cursor: pointer; }
+        .user-item:hover { background: #ddd; }
+
+        .chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 15px; background: #fafafa; border-radius: 5px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .bubble { max-width: 75%; padding: 10px; border-radius: 15px; font-size: 14px; }
+        .bubble-me { background: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 0; }
+        .bubble-them { background: #fff; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 0; }
     </style>
 </head>
 <body>
 
     <h2>Aplikasi Forum</h2>
+    <!-- Navigasi Setelah Login -->
+    <div id="main-nav" class="main-nav">
+        <button onclick="switchView('forum-list')">🏠 Beranda</button>
+        <button onclick="switchView('chat-section')">💬 Pesan Pribadi</button>
+        <button onclick="logout()" style="float: right; color: #ffcccc;">Logout</button>
+    </div>
+
     
     <div class="nav-buttons">
         <button onclick="showSection('login')">Login</button>
@@ -136,6 +157,31 @@
         <button class="action-btn btn-cancel" onclick="closeEditor()">Batal</button>
     </div>
 
+    <!-- TAMPILAN CHAT (BARU) -->
+    <div id="chat-section" class="form-section">
+        <h3>Pesan Pribadi</h3>
+        
+        <!-- Daftar Kontak -->
+        <div id="contact-list" class="user-list">
+            <!-- Daftar user muncul di sini -->
+        </div>
+
+        <!-- Ruang Obrolan -->
+        <div id="chat-room" style="display: none;">
+            <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+                <button class="btn-small" onclick="closeChat()">⬅ Kembali</button> 
+                Chat dengan <span id="chat-target-name"></span>
+            </h4>
+            
+            <div id="chat-messages" class="chat-box"></div>
+            
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" placeholder="Tulis pesan..." style="margin-top: 0;">
+                <button class="btn-small btn-new-post" style="width: 80px; margin: 0;" onclick="sendChatMessage()">Kirim</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Navigasi antar form
         function showSection(id) {
@@ -192,10 +238,24 @@
             const user = localStorage.getItem('sessionUser');
             if (user) {
                 document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
-                document.getElementById('forum-list').classList.add('active'); // Tampilkan Timeline
-                document.querySelector('.nav-buttons').style.display = 'none';
-                document.getElementById('currentUser').innerText = user;
+                document.querySelector('.nav-buttons').style.display = 'none'; // Sembunyikan tombol login/register
+                
+                document.getElementById('main-nav').style.display = 'block'; // Tampilkan menu navigasi
+                document.getElementById('forum-list').classList.add('active'); // Default buka beranda
+                
                 loadArticles();
+            }
+        }
+
+        // Fungsi Switch Tab Menu
+        function switchView(viewId) {
+            document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            if (viewId === 'forum-list') loadArticles();
+            if (viewId === 'chat-section') {
+                closeChat(); // Reset tampilan ke daftar kontak
+                loadContacts();
             }
         }
 
@@ -411,6 +471,100 @@
                 btn.innerText = "Terbitkan";
             }
         }
+
+        // --- LOGIKA CHAT PRIBADI ---
+        
+        let currentChatTarget = ''; // Simpan nama teman chat saat ini
+        let chatInterval = null; // Auto-refresh obrolan
+
+        async function loadContacts() {
+            const currentUser = localStorage.getItem('sessionUser');
+            const res = await fetch(`/api/chat/users?user=${currentUser}`);
+            const data = await res.json();
+            
+            const contactList = document.getElementById('contact-list');
+            contactList.innerHTML = '';
+
+            data.data.forEach(user => {
+                contactList.innerHTML += `
+                    <div class="user-item" onclick="openChat('${user.username}')">
+                        👤 ${user.username}
+                    </div>
+                `;
+            });
+        }
+
+        async function openChat(targetUser) {
+            currentChatTarget = targetUser;
+            document.getElementById('contact-list').style.display = 'none';
+            document.getElementById('chat-room').style.display = 'block';
+            document.getElementById('chat-target-name').innerText = targetUser;
+            
+            await fetchMessages();
+            // Polling untuk update chat otomatis setiap 3 detik
+            if(chatInterval) clearInterval(chatInterval);
+            chatInterval = setInterval(fetchMessages, 3000); 
+        }
+
+        function closeChat() {
+            if(chatInterval) clearInterval(chatInterval);
+            document.getElementById('chat-room').style.display = 'none';
+            document.getElementById('contact-list').style.display = 'grid';
+        }
+
+        async function fetchMessages() {
+            const username = localStorage.getItem('sessionUser');
+            const password = localStorage.getItem('sessionPass');
+            
+            const res = await fetch('/api/chat/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, targetUser: currentChatTarget })
+            });
+            const data = await res.json();
+            
+            const chatBox = document.getElementById('chat-messages');
+            chatBox.innerHTML = '';
+
+            data.data.forEach(msg => {
+                const isMe = msg.sender === username;
+                const date = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                
+                chatBox.innerHTML += `
+                    <div class="bubble ${isMe ? 'bubble-me' : 'bubble-them'}">
+                        ${msg.content}
+                        <div style="font-size:10px; color:gray; text-align:right; margin-top:5px;">${date}</div>
+                    </div>
+                `;
+            });
+            
+            // Auto scroll ke bawah
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const content = input.value;
+            if(!content.trim()) return;
+
+            const username = localStorage.getItem('sessionUser');
+            const password = localStorage.getItem('sessionPass');
+
+            input.value = 'Mengirim...';
+            input.disabled = true;
+
+            await fetch('/api/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, targetUser: currentChatTarget, content })
+            });
+
+            input.value = '';
+            input.disabled = false;
+            input.focus();
+            fetchMessages(); // Langsung load pesan baru
+        }
+        
 
         // Cek sesi saat halaman pertama kali dimuat
         window.onload = checkSession;
