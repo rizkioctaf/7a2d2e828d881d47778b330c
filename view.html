@@ -4,22 +4,33 @@
 <body>
     <a href="index.html">← Kembali</a>
     <hr>
-    <div id="article-content">Loading...</div>
+    <div id="article-content">Memuat artikel...</div>
 
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
+        // PROTEKSI: Cek apakah user sudah login
+        if (!localStorage.getItem('username')) {
+            alert("Akses ditolak! Anda harus login untuk membaca keseluruhan artikel.");
+            window.location.href = 'login.html';
+        } else {
+            // Jika sudah login, tampilkan artikel
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
 
-        fetch(`/api/article?id=${id}`)
-            .then(res => res.json())
-            .then(art => {
-                document.getElementById('article-content').innerHTML = `
-                    <h1>${art.title}</h1>
-                    <p><strong>Kategori:</strong> ${art.category} | <strong>Penulis:</strong> ${art.author}</p>
-                    <hr>
-                    <p style="white-space: pre-wrap;">${art.content}</p>
-                `;
-            });
+            fetch(`/api/article?id=${id}`)
+                .then(res => res.json())
+                .then(art => {
+                    if(art) {
+                        document.getElementById('article-content').innerHTML = `
+                            <h1>${art.title}</h1>
+                            <p><strong>Kategori:</strong> ${art.category} | <strong>Penulis:</strong> ${art.author}</p>
+                            <hr>
+                            <p style="white-space: pre-wrap;">${art.content}</p>
+                        `;
+                    } else {
+                        document.getElementById('article-content').innerHTML = "<p>Artikel tidak ditemukan.</p>";
+                    }
+                });
+        }
     </script>
 </body>
 </html>

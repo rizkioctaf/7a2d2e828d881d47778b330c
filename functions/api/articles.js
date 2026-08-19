@@ -2,9 +2,9 @@ export async function onRequest(context) {
   const { request, env } = context;
   
   if (request.method === "GET") {
-    // Ambil daftar artikel dengan preview singkat (100 karakter pertama)
+    // Hapus bagian preview, hanya ambil id, title, category, dan author
     const { results } = await env.DB.prepare(
-      "SELECT id, title, category, author, substr(content, 1, 100) || '...' as preview FROM articles ORDER BY id DESC"
+      "SELECT id, title, category, author FROM articles ORDER BY id DESC"
     ).all();
     return Response.json(results);
   }
